@@ -131,7 +131,7 @@ function App(props: RouteSectionProps) {
       getConfigDescription(),
     ];
     await Promise.allSettled(prebuildFunctions);
-    setPage(Pages.Configuration);
+    setPage(Pages.Monitoring);
   });
 
   async function detectCliVersion() {
@@ -666,17 +666,17 @@ function App(props: RouteSectionProps) {
     configuration: {
       icon: IconFileSettings,
       label: "Configuration",
-      disabled: false,
+      disabled: true,
     },
     logging: {
       icon: IconGraph,
       label: "Logging",
-      disabled: false,
+      disabled: true,
     },
     logViewer: {
       icon: IconDeviceAnalytics,
       label: "Log Viewer",
-      disabled: false,
+      disabled: true,
     },
     monitoring: {
       icon: IconDeviceDesktopSearch,
@@ -749,6 +749,7 @@ function App(props: RouteSectionProps) {
           >
             <Index each={Object.keys(pages)}>
               {(val) => (
+                <Show when = {!pages[val()].disabled}>
                 <Button
                   class={css({
                     width: "min-content",
@@ -767,13 +768,15 @@ function App(props: RouteSectionProps) {
                   disabled={pages[val()].disabled}
                   onClick={() => setPage(val() as Pages)}
                 >
+
                   <Text
                     textStyle="sm"
                     opacity={page().toString() === val() ? "1" : "0.6"}
                   >
                     {pages[val()].label}
                   </Text>
-                </Button>
+                  </Button>
+                </Show>
               )}
             </Index>
           </div>

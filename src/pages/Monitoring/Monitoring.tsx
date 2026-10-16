@@ -491,15 +491,6 @@ function Monitoring() {
                 {"Control"}
               </Tabs.Trigger>
               <Tabs.Trigger
-                value="Scenario"
-                padding="0.5em"
-                borderRadius={"0"}
-                borderTopWidth={"0"}
-                disabled={lines.length === 0}
-              >
-                {"Scenario"}
-              </Tabs.Trigger>
-              <Tabs.Trigger
                 value="Carriers"
                 padding="0.5em"
                 borderRadius={"0"}
@@ -511,6 +502,15 @@ function Monitoring() {
                 }
               >
                 {"Carriers"}
+              </Tabs.Trigger>
+              <Tabs.Trigger
+                value="Scenario"
+                padding="0.5em"
+                borderRadius={"0"}
+                borderTopWidth={"0"}
+                disabled
+              >
+                {"Scenario"}
               </Tabs.Trigger>
               {/* Resize trigger */}
               <IconButton
