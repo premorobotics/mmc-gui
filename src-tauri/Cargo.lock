@@ -730,27 +730,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "drivercom-gui"
-version = "0.18.0"
-dependencies = [
- "ipnet",
- "local-ip-address",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-os",
- "tauri-plugin-pty",
- "tauri-plugin-shell",
- "tauri-plugin-store",
- "tauri-plugin-tcp",
- "tauri-plugin-window-state",
- "tokio",
-]
-
-[[package]]
 name = "dtoa"
 version = "1.0.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1929,6 +1908,27 @@ dependencies = [
  "libc",
  "wasi",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "mmc-gui"
+version = "0.0.1"
+dependencies = [
+ "ipnet",
+ "local-ip-address",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-os",
+ "tauri-plugin-pty",
+ "tauri-plugin-shell",
+ "tauri-plugin-store",
+ "tauri-plugin-tcp",
+ "tauri-plugin-window-state",
+ "tokio",
 ]
 
 [[package]]
