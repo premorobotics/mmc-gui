@@ -33,9 +33,9 @@ export type TabListContext = {
 
 export type TabContext = {
   tab: TabType;
-  tabPage?: OneOfType<{
+  tabPage?: {
     logViewerTabPage: LogViewerTabPage;
-  }>;
+  };
 };
 
 export type TabLocation =

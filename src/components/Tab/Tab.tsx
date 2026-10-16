@@ -13,7 +13,6 @@ import { createEffect } from "solid-js";
 import { Text } from "../ui/text.tsx";
 import { tabStore } from "~/store/GlobalState.ts";
 import { TabContext } from "./TabList.tsx";
-import JSON5 from "json5";
 import { css } from "styled-system/css/css";
 
 export type TabType = {
@@ -59,21 +58,6 @@ export function Tab(props: TabProps) {
 
   const setTabContext = (newContext: TabContext[]) => {
     return tabStore.get(props.key)?.[1]("tabContext", newContext);
-  };
-
-  const isConfigChange = (index: number): boolean => {
-    const getTabContext = getTabContexts()[index];
-    if (
-      !getTabContext.tabPage ||
-      !getTabContext.tabPage.configTabPage ||
-      !getTabContext.tabPage.configTabPage.originalFile ||
-      !getTabContext.tabPage.configTabPage.configForm
-    )
-      return false;
-    return (
-      JSON5.stringify(getTabContext.tabPage.configTabPage.configForm) !==
-      JSON5.stringify(getTabContext.tabPage.configTabPage.originalFile)
-    );
   };
 
   //@ts-ignore This draggable is needed to use neo-drag.
@@ -278,7 +262,6 @@ export function Tab(props: TabProps) {
                       height: "0.5em",
                       "border-radius": "1em",
                     }}
-                    opacity={isConfigChange(tabIndex()) ? 1 : 0}
                     background="accent.7"
                   />
                   <Editable.Root
