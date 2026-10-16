@@ -1,4 +1,4 @@
-# drivercom-gui
+# mmc-gui
 
 ## Development
 

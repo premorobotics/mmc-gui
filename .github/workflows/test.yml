@@ -47,12 +47,7 @@ jobs:
       - name: Generate proto files
         run: pnpm mmc-api
         env:
-          GH_TOKEN: ${{ secrets.DRIVERCOM_CLI_RELEASE_ACCESS_TOKEN }}
-
-      - name: Generate config types
-        run: pnpm drivercom
-        env:
-          GH_TOKEN: ${{ secrets.DRIVERCOM_CLI_RELEASE_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secrets.MMC_CLI_RELEASE_ACCESS_TOKEN }}
 
       - name: Check lints and types
         run: pnpm check
@@ -71,7 +66,7 @@ jobs:
       - name: Cargo Build
         run: pnpm tauri build --verbose
         env:
-          GH_TOKEN: ${{ secrets.DRIVERCOM_CLI_RELEASE_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secrets.MMC_CLI_RELEASE_ACCESS_TOKEN }}
 
       - name: Cargo Test
         working-directory: ./src-tauri

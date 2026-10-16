@@ -43,7 +43,7 @@ jobs:
         id: check-tag
         with:
           tag: "${{ steps.parse-version.outputs.VERSION }}"
-          repo: "pmotionf/drivercom-gui"
+          repo: "pmotionf/mmc-gui"
 
       - name: Create release
         id: create-release
@@ -94,7 +94,7 @@ jobs:
       - name: Build
         run: pnpm tauri build
         env:
-          GH_TOKEN: ${{ secrets.DRIVERCOM_CLI_RELEASE_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secrets.MMC_CLI_RELEASE_ACCESS_TOKEN }}
 
       - name: Upload Linux
         if: matrix.os =='Linux'
