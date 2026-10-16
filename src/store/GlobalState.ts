@@ -5,18 +5,6 @@ import { TabListContext } from "~/components/Tab/TabList.tsx";
 import { Child } from "@tauri-apps/plugin-shell";
 import { DownloadStates } from "~/components/DownloadList.tsx";
 import { IpAddress } from "~/pages/Monitoring/System/IpHistory.tsx";
-import {
-  ConfigType,
-  configDefaultValues,
-} from "src-tauri/generated/config/ConfigType.tsx";
-import {
-  logConfigDefaultValues,
-  LogConfigType,
-} from "src-tauri/generated/config/LogConfigType.tsx";
-import { ConfigFormatType } from "~/pages/Configuration/ConfigForm/ConfigForm.tsx";
-import { configTuneDefaultValues } from "src-tauri/generated/config/ConfigTune.tsx";
-import { configSystemDefaultValues } from "src-tauri/generated/config/ConfigSystem.tsx";
-import { configCalibrationDefaultValues } from "src-tauri/generated/config/ConfigCalibration.tsx";
 
 const [globalState, setGlobalState] = createStore({
   theme: "light",
@@ -44,11 +32,6 @@ export const [driverComVersion, setDriverComVersion] = createSignal<string>("");
 export const [apiVersion, setApiVersion] = createSignal<string>("");
 
 export const [portList, setPortList] = createSignal<Port[]>([]);
-
-export const [logFormFileFormat, setLogFormFileFormat] =
-  createSignal<LogConfigType>(logConfigDefaultValues);
-export const [configFormFileFormat, setConfigFormFileFormat] =
-  createSignal<ConfigType>(configDefaultValues);
 
 export const [recentLogFilePaths, setRecentLogFilePaths] = createSignal<
   string[]
@@ -111,13 +94,6 @@ export const [logConfigDescription, setLogConfigDescription] =
 
 export const [detectedServer, setDetectedServer] = createSignal<IpAddress[]>(
   [],
-);
-export const [configTabForm, setConfigTabForm] = createSignal<ConfigFormatType>(
-  {
-    tune: configTuneDefaultValues,
-    system: configSystemDefaultValues,
-    calibration: configCalibrationDefaultValues,
-  },
 );
 
 export const tcpClientIds: string[] = [];

@@ -103,8 +103,6 @@ export const DownloadList = (props: JSX.HTMLAttributes<HTMLDivElement>) => {
           logViewerTabPage: {
             filePath: newFilePath,
           },
-          configTabPage: null,
-          loggingTabPage: null,
         },
       };
       setTimeout(() => {

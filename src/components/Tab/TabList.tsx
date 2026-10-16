@@ -16,10 +16,8 @@ import {
 import { tabStore } from "~/store/GlobalState.ts";
 import { createStore } from "solid-js/store";
 import { PanelContext } from "../Panel/Panel.tsx";
-import { ConfigTabPage } from "~/pages/Configuration/ConfigTabContent.tsx";
 import { createSignal } from "solid-js";
 import { toaster } from "~/components/ui/toast.tsx";
-import { LoggingPageTabContentType } from "~/pages/Logging/Logging.tsx";
 
 type ValueOf<Obj> = Obj[keyof Obj];
 type OneOnly<Obj, Key extends keyof Obj> = {
@@ -37,8 +35,6 @@ export type TabContext = {
   tab: TabType;
   tabPage?: OneOfType<{
     logViewerTabPage: LogViewerTabPage;
-    configTabPage: ConfigTabPage;
-    loggingTabPage: LoggingPageTabContentType;
   }>;
 };
 
