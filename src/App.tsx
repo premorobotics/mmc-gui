@@ -1,0 +1,952 @@
+import "./App.css";
+
+import { invoke } from "@tauri-apps/api/core";
+import {
+  createEffect,
+  createSignal,
+  Index,
+  on,
+  onCleanup,
+  onMount,
+  Show,
+  ValidComponent,
+} from "solid-js";
+import type { RouteSectionProps } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
+
+import {
+  IconDeviceAnalytics,
+  IconDeviceDesktopSearch,
+  IconFileSettings,
+  IconGraph,
+  IconInfoCircle,
+  IconMoonFilled,
+  IconSunFilled,
+} from "@tabler/icons-solidjs";
+
+import {
+  cliVersion,
+  driverComVersion,
+  globalState,
+  GlobalStateContext,
+  page,
+  Pages,
+  setCliVersion,
+  setConfigFormFileFormat,
+  setDriverComVersion,
+  setGlobalState,
+  setLogFormFileFormat,
+  setLogStartConditionList,
+  setLogStartCombinatorList,
+  setPage,
+  Theme,
+  setConfigDescription,
+  setConfigTabForm,
+  setLogConfigDescription,
+  setApiVersion,
+  apiVersion,
+  setRecentConfigFilePaths,
+  setRecentLogFilePaths,
+  setIpHistory,
+  panelStore,
+  pageKeys,
+  tabStore,
+  configFormFileFormat,
+  logFormFileFormat,
+  setCclinkSpeed,
+} from "./store/GlobalState.ts";
+
+import { Text } from "~/components/ui/text.tsx";
+
+import { Command } from "@tauri-apps/plugin-shell";
+import { DownloadList } from "./components/DownloadList.tsx";
+//@ts-ignore This file is generate after run compiler.
+import api from "src-tauri/generated/api.json";
+import JSON5 from "json5";
+import { load } from "@tauri-apps/plugin-store";
+import { IpAddress } from "./pages/Monitoring/System/IpHistory.tsx";
+import { ConfigTuneType } from "src-tauri/generated/config/ConfigTune.tsx";
+import { ConfigCalibrationType } from "src-tauri/generated/config/ConfigCalibration.tsx";
+import { ConfigSystemType } from "src-tauri/generated/config/ConfigSystem.tsx";
+import { logConfigDefaultValues } from "src-tauri/generated/config/LogConfigType.tsx";
+import {
+  configDefaultValues,
+  ConfigType,
+} from "src-tauri/generated/config/ConfigType.tsx";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
+import {
+  AccordionStates,
+  GainLockStates,
+  LinkStates,
+} from "~/pages/Configuration/ConfigForm/ConfigForm.tsx";
+import { TabContext } from "~/components/Tab/TabList.tsx";
+import { FileHandler } from "./services/FileHandler.ts";
+import { Toaster } from "./components/ui/toast.tsx";
+import { toaster } from "~/components/ui/toast.tsx";
+import { createStore } from "solid-js/store";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { Stack } from "styled-system/jsx/stack";
+import { UnlistenFn } from "@tauri-apps/api/event";
+import { css } from "styled-system/css/css";
+import * as Popover from "./components/ui/popover.tsx";
+import { IconButton } from "./components/ui/icon-button.tsx";
+import { Portal } from "solid-js/web";
+import { LoggingAccordionStates } from "./components/Form.tsx";
+import { Button } from "./components/ui/button.tsx";
+
+type PageMeta = {
+  icon: ValidComponent;
+  label: string;
+  disabled: boolean;
+};
+
+function App(props: RouteSectionProps) {
+  // Necessary for light/dark mode detection
+  onMount(async () => {
+    const prefers_dark = globalThis.matchMedia(
+      "(prefers-color-scheme: dark)",
+    ).matches;
+    let theme_str: Theme = prefers_dark ? "dark" : "light";
+
+    if (typeof localStorage !== "undefined" && localStorage.getItem("theme")) {
+      theme_str = localStorage.getItem("theme")! as Theme;
+    }
+
+    document.documentElement.dataset.theme = theme_str;
+    setGlobalState("theme", theme_str);
+
+    detectApiVersion();
+    buildEmptyLogConfiguration();
+    buildEmptyDriverConfiguration();
+
+    const prebuildFunctions = [
+      detectCliVersion(),
+      getLogStartCombinator(),
+      getLogStartCondition(),
+      getCclinkSpeenEnum(),
+      getLogConfigDescription(),
+      prepareConfigTabFormat(),
+      getStoreValues(),
+      enableDropEvent(),
+      getConfigDescription(),
+    ];
+    await Promise.allSettled(prebuildFunctions);
+    setPage(Pages.Configuration);
+  });
+
+  async function detectCliVersion() {
+    const drivercom = Command.sidecar("binaries/drivercom", ["version"]);
+    const output = await drivercom.execute();
+    const outputSplit = output.stdout.split(/\s/);
+
+    const cliVersion = outputSplit[1];
+    const drivercomVersion = outputSplit[3];
+
+    setCliVersion(cliVersion);
+    setDriverComVersion(drivercomVersion);
+  }
+
+  function buildEmptyLogConfiguration() {
+    setLogFormFileFormat(logConfigDefaultValues);
+  }
+
+  function buildEmptyDriverConfiguration() {
+    setConfigFormFileFormat(configDefaultValues);
+  }
+
+  function detectApiVersion() {
+    const findApi = /protobuf-api-/;
+    const findApiIndex = api.findIndex(
+      (version: object) =>
+        "name" in version &&
+        typeof version.name === "string" &&
+        findApi.test(version.name),
+    );
+
+    const apiRegex = /[0-9]+\.[0-9]+\.[0-9]+$/;
+    const apiVersionNum = api[findApiIndex].name.match(apiRegex);
+    if (apiVersionNum) {
+      setApiVersion(apiVersionNum[0]);
+    }
+  }
+
+  // Get log start options from the drivercom-CLI Command
+  async function getLogStartCondition() {
+    const logStartCondition = Command.sidecar("binaries/drivercom", [
+      `log.config.start.condition.list`,
+    ]);
+    const output = await logStartCondition.execute();
+    const parseOutput = output.stdout
+      .replaceAll("[", "")
+      .replaceAll("]", "")
+      .split(":");
+    const startConditionList = parseOutput[1]
+      .split(",")
+      .filter((value) => value !== "\n");
+    setLogStartConditionList(startConditionList);
+  }
+
+  // Get log start combinator options from the drivercom-CLI Command
+  async function getLogStartCombinator() {
+    const logStartCombinator = Command.sidecar("binaries/drivercom", [
+      `log.config.start.combinator.list`,
+    ]);
+    const output = await logStartCombinator.execute();
+    const parseOutput = output.stdout
+      .replaceAll("[", "")
+      .replaceAll("]", "")
+      .split(":");
+    const startCombinatorList = parseOutput[1]
+      .split(",")
+      .filter((value) => value !== "\n");
+    setLogStartCombinatorList(startCombinatorList);
+  }
+
+  async function getCclinkSpeenEnum() {
+    const cclinkSpeedList = Command.sidecar("binaries/drivercom", [
+      `config.cc_link_speed.list`,
+    ]);
+    const output = await cclinkSpeedList.execute();
+    const parseOutput = output.stdout
+      .replaceAll("[", "")
+      .replaceAll("]", "")
+      .split(":");
+    const cclinkSpeed = parseOutput[1]
+      .split(",")
+      .filter((value) => value !== "\n");
+    setCclinkSpeed(cclinkSpeed);
+  }
+
+  async function getConfigDescription() {
+    const configDesc = Command.sidecar("binaries/drivercom", [`config.info`]);
+    const output = await configDesc.execute();
+    const desc = JSON5.parse(output.stdout);
+    setConfigDescription(desc);
+  }
+
+  async function getLogConfigDescription() {
+    const configDesc = Command.sidecar("binaries/drivercom", [`log.info`]);
+    const output = await configDesc.execute();
+    const desc = JSON5.parse(output.stdout);
+    setLogConfigDescription(desc);
+  }
+
+  async function getTuneConfig(): Promise<ConfigTuneType> {
+    const getTuneConfig = Command.sidecar("binaries/drivercom", [
+      `config.empty.tune`,
+    ]);
+    const output = await getTuneConfig.execute();
+    const tuneConfig: ConfigTuneType = JSON5.parse(output.stdout);
+    return tuneConfig;
+  }
+
+  async function getCalibrationConfig(): Promise<ConfigCalibrationType> {
+    const getCalibrationConfig = Command.sidecar("binaries/drivercom", [
+      `config.empty.calibration`,
+    ]);
+    const output = await getCalibrationConfig.execute();
+    const calConfig: ConfigCalibrationType = JSON5.parse(output.stdout);
+    return calConfig;
+  }
+
+  async function getSystemConfig(): Promise<ConfigSystemType> {
+    const getSystemConfig = Command.sidecar("binaries/drivercom", [
+      `config.empty.system`,
+    ]);
+    const output = await getSystemConfig.execute();
+    const systemConfig: ConfigSystemType = JSON5.parse(output.stdout);
+    return systemConfig;
+  }
+
+  async function prepareConfigTabFormat() {
+    const tuneConfig = await getTuneConfig();
+    const calConfig = await getCalibrationConfig();
+    const systemConfig = await getSystemConfig();
+    const config = {
+      system: systemConfig,
+      tune: tuneConfig,
+      calibration: calConfig,
+    };
+    setConfigTabForm(config);
+  }
+
+  // Get local storage values using the Tauri store API.
+  async function getStoreValues() {
+    const store = await load("store.json", {
+      defaults: {
+        configFilePath: undefined,
+        logFilePath: undefined,
+        ipHistory: undefined,
+      },
+      autoSave: false,
+    });
+    const hasConfigRecentFiles = await store.has("configFilePath");
+    if (hasConfigRecentFiles) {
+      const getRecentConfigs: string[] = (await store.get(
+        "configFilePath",
+      )) as string[];
+      setRecentConfigFilePaths(getRecentConfigs);
+    }
+    const hasLogRecentFiles = await store.has("logFilePath");
+    if (hasLogRecentFiles) {
+      const getRecentLogs: string[] = (await store.get(
+        "logFilePath",
+      )) as string[];
+      setRecentLogFilePaths(getRecentLogs);
+    }
+    const hasIpHistory = await store.has("ipHistory");
+    if (hasIpHistory) {
+      const getIpHistory = (await store.get("ipHistory")) as IpAddress[];
+      setIpHistory(getIpHistory);
+    }
+  }
+
+  // This is needed to unlisten drag drop event when app is closed.
+  let unlistenDragDropEvent: UnlistenFn;
+  const [overlayTop, setOverlayTop] = createSignal<number | null>(null);
+  const [overlayLeft, setOverlayLeft] = createSignal<number | null>(null);
+  const [overlayWidth, setOverlayWidth] = createSignal<number | null>(null);
+  const [overlayHeight, setOverlayHeight] = createSignal<number | null>(null);
+
+  async function enableDropEvent() {
+    const scaleFactor = await getCurrentWindow().scaleFactor();
+    unlistenDragDropEvent = await getCurrentWebview().onDragDropEvent(
+      async (event) => {
+        setOverlayTop(null);
+        setOverlayLeft(null);
+        setOverlayWidth(null);
+        setOverlayHeight(null);
+
+        // The component cannot directly detect drag leave or file drop events.
+        // To handle this, the dragOver event retrieves the client rects of each panel
+        // and determines which panel the file is currently being dragged over,
+        // then updates the status accordingly.
+        if (event.payload.type === "over") {
+          const client = event.payload.position;
+          const logicalX = client.x / scaleFactor;
+          const logicalY = client.y / scaleFactor;
+
+          if (page() !== Pages.Monitoring) {
+            if (pageKeys.has(page())) {
+              const panelKey = pageKeys.get(page());
+              const [panels] = panelStore.get(panelKey!)!;
+
+              for (let i = 0; i < panels().length; i++) {
+                const currentPanelId = panels()[i].id;
+                const element = document.getElementById(
+                  `tabs:${currentPanelId}`,
+                );
+                if (element) {
+                  const clientRect = element.getBoundingClientRect();
+                  const top = clientRect.y;
+                  const bottom = clientRect.bottom;
+                  const left = clientRect.x;
+                  const right = clientRect.right;
+
+                  const widthQuarter = clientRect.width * 0.25;
+                  const leftArea = left + widthQuarter;
+                  const rightArea = right - widthQuarter;
+
+                  if (top < logicalY && logicalY < bottom) {
+                    const [tabContext] = tabStore.get(currentPanelId)!;
+                    if (
+                      tabContext.tabContext.length === 0 &&
+                      panels().length === 1
+                    ) {
+                      if (left < logicalX && logicalX < right) {
+                        setOverlayTop(top);
+                        setOverlayLeft(left);
+                        setOverlayWidth(clientRect.width);
+                        setOverlayHeight(clientRect.height);
+                      }
+                      break;
+                    }
+                    if (left < logicalX && logicalX < leftArea) {
+                      setOverlayTop(top);
+                      setOverlayLeft(left);
+                      setOverlayWidth(clientRect.width * 0.5);
+                      setOverlayHeight(clientRect.height);
+                      break;
+                    } else if (leftArea <= logicalX && logicalX <= rightArea) {
+                      setOverlayTop(top);
+                      setOverlayLeft(left);
+                      setOverlayWidth(clientRect.width);
+                      setOverlayHeight(clientRect.height);
+                      break;
+                    } else if (rightArea < logicalX && logicalX < right) {
+                      setOverlayTop(top);
+                      setOverlayLeft(left + clientRect.width * 0.5);
+                      setOverlayWidth(clientRect.width * 0.5);
+                      setOverlayHeight(clientRect.height);
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // After the file drop event, the drop position is calculated
+        // to decide whether the panel should be split
+        // or the file should be added as a new tab.
+        if (event.payload.type === "drop") {
+          if (event.payload.paths.length > 1) {
+            toaster.create({
+              title: "Invalid files",
+              description: "Invalid multiple files",
+              type: "error",
+            });
+            return;
+          }
+          const file = new FileHandler();
+
+          if (page() !== Pages.Monitoring) {
+            if (pageKeys.has(page())) {
+              const panelKey = pageKeys.get(page());
+              const clientPosition = event.payload.position;
+              const logicalX = clientPosition.x / scaleFactor;
+              const logicalY = clientPosition.y / scaleFactor;
+
+              if (panelKey && panelStore.has(panelKey)) {
+                const panels = panelStore.get(panelKey)![0]();
+                let tabStoreKey = "";
+                let fileDropPanel = "";
+                let panelIndex: number | null = null;
+                for (let i = 0; i < panels.length; i++) {
+                  const currentPanelId = panels[i].id;
+                  const element = document.getElementById(
+                    `tabs:${currentPanelId}`,
+                  );
+
+                  if (element) {
+                    const clientRect = element.getBoundingClientRect();
+                    const top = clientRect.top;
+                    const bottom = clientRect.bottom;
+                    const left = clientRect.left;
+                    const right = clientRect.right;
+                    const widthQuarter = clientRect.width * 0.25;
+                    const leftArea = left + widthQuarter;
+                    const rightArea = right - widthQuarter;
+
+                    if (top < logicalY && logicalY < bottom) {
+                      const currentTabLength =
+                        tabStore.get(currentPanelId)![0].tabContext.length;
+
+                      if (left < logicalX && logicalX < leftArea) {
+                        if (currentTabLength < 1 && panels.length === 1) {
+                          tabStoreKey = currentPanelId;
+                        } else {
+                          panelIndex = i;
+                          tabStoreKey = crypto.randomUUID();
+                        }
+                        fileDropPanel = currentPanelId;
+                        break;
+                      } else if (
+                        leftArea <= logicalX &&
+                        logicalX <= rightArea
+                      ) {
+                        tabStoreKey = currentPanelId;
+                        fileDropPanel = currentPanelId;
+                        break;
+                      } else if (rightArea < logicalX && logicalX < right) {
+                        if (currentTabLength < 1 && panels.length === 1) {
+                          tabStoreKey = currentPanelId;
+                        } else {
+                          panelIndex = i + 1;
+                          tabStoreKey = crypto.randomUUID();
+                        }
+                        fileDropPanel = currentPanelId;
+                        break;
+                      }
+                    }
+                  }
+                }
+
+                panelStore.get(panelKey)![1]((prev) =>
+                  prev.map((panel) => {
+                    if (panel.id === fileDropPanel) {
+                      return { ...panel, isDragLeave: true };
+                    } else {
+                      return panel;
+                    }
+                  }),
+                );
+
+                if (tabStoreKey.length > 0) {
+                  const id = crypto.randomUUID();
+                  const filePath = event.payload.paths[0].replaceAll("\\", "/");
+                  const parseFileName = filePath.split("/").pop()!;
+                  const fileExtentionStartIndex =
+                    parseFileName.lastIndexOf(".");
+                  const tabName = parseFileName.slice(
+                    0,
+                    fileExtentionStartIndex,
+                  );
+
+                  let newTab: TabContext | null = null;
+                  if (page() === Pages.Configuration) {
+                    if (!event.payload.paths[0].endsWith("json5")) {
+                      toaster.create({
+                        title: "Invalid File",
+                        description: "Invalid file extension.",
+                        type: "error",
+                      });
+                      return;
+                    }
+                    const accordionStatuses: AccordionStates = new Map();
+                    const linkedStatuses: LinkStates = new Map();
+                    const gainLockStatuses: GainLockStates = new Map();
+                    const formOverflowY: Map<string, number> = new Map();
+
+                    try {
+                      const newForm = await file.readFile(
+                        event.payload.paths[0],
+                        JSON5.parse(JSON5.stringify(configFormFileFormat())),
+                      );
+
+                      newTab = {
+                        tab: {
+                          id: id,
+                          tabName: tabName!,
+                        },
+                        tabPage: {
+                          configTabPage: {
+                            filePath: filePath,
+                            portId: "",
+                            configForm: newForm as ConfigType,
+                            configAccordionStatuses: accordionStatuses,
+                            configLinkedStatuses: linkedStatuses,
+                            configGainLockStatuses: gainLockStatuses,
+                            formName: tabName,
+                            originalFile: JSON5.parse(JSON5.stringify(newForm)),
+                            formOverflowY: formOverflowY,
+                          },
+                          logViewerTabPage: null,
+                          loggingTabPage: null,
+                        },
+                      };
+                    } catch {
+                      toaster.create({
+                        title: "Invalid File",
+                        description: "Invalid file format.",
+                        type: "error",
+                      });
+                      return;
+                    }
+                  } else if (page() === Pages.LogViewer) {
+                    if (!event.payload.paths[0].endsWith("csv")) {
+                      toaster.create({
+                        title: "Invalid File",
+                        description: "Invalid file extension.",
+                        type: "error",
+                      });
+                      return;
+                    }
+                    newTab = {
+                      tab: {
+                        id: id,
+                        tabName: tabName!,
+                      },
+                      tabPage: {
+                        logViewerTabPage: {
+                          filePath: filePath,
+                          plotSplitIndex: [],
+                          plotContext: [],
+                          plotXScale: [0, 0],
+                        },
+                        configTabPage: null,
+                        loggingTabPage: null,
+                      },
+                    };
+                  } else if (page() === Pages.Logging) {
+                    if (!event.payload.paths[0].endsWith("json5")) {
+                      toaster.create({
+                        title: "Invalid File",
+                        description: "Invalid file extension.",
+                        type: "error",
+                      });
+                      return;
+                    }
+                    try {
+                      const logConfig = await file.readFile(
+                        event.payload.paths[0],
+                        logFormFileFormat(),
+                      );
+                      const accordionStatuses: LoggingAccordionStates =
+                        new Map();
+
+                      newTab = {
+                        tab: {
+                          id: id,
+                          tabName: tabName!,
+                        },
+                        tabPage: {
+                          loggingTabPage: {
+                            title: event.payload.paths[0]
+                              .replaceAll("\\", "/")
+                              .match(/[^?!//]+$/!)!
+                              .toString()
+                              .split(".")
+                              .shift()!,
+                            filePath: event.payload.paths[0].replaceAll(
+                              "\\",
+                              "/",
+                            ),
+                            logConfig: logConfig,
+                            originalFile: JSON5.parse(
+                              JSON5.stringify(logConfig),
+                            ),
+                            portId: "",
+                            accordionStates: accordionStatuses,
+                          },
+                          configTabPage: null,
+                          logViewerTabPage: null,
+                        },
+                      };
+                    } catch {
+                      toaster.create({
+                        title: "Invalid File",
+                        description: "Invalid file format.",
+                        type: "error",
+                      });
+                    }
+                  }
+
+                  if (tabStore.has(tabStoreKey)) {
+                    if (newTab) {
+                      const tabCtx = tabStore.get(tabStoreKey)!;
+                      tabCtx[1]({
+                        tabContext: [...tabCtx[0].tabContext, newTab],
+                        focusedTab: newTab.tab.id,
+                      });
+                    }
+                  } else {
+                    if (newTab) {
+                      tabStore.set(
+                        tabStoreKey,
+                        createStore({
+                          focusedTab: newTab.tab.id,
+                          tabContext: [newTab],
+                        }),
+                      );
+                    }
+
+                    if (panelIndex !== null) {
+                      panelStore.get(panelKey)![1]((prev) => {
+                        const newSize = 100 / (prev.length + 1);
+                        const changeSize = prev.map((panel) => {
+                          return { ...panel, size: newSize };
+                        });
+                        const newPanel = { id: tabStoreKey, size: newSize };
+                        const updatePanels = [
+                          ...changeSize.slice(0, panelIndex),
+                          newPanel,
+                          ...changeSize.slice(panelIndex),
+                        ];
+                        return updatePanels;
+                      });
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+    );
+  }
+
+  const [version, setVersion] = createSignal("0.0.0");
+  invoke("version").then((ver) => setVersion(ver as string));
+
+  const navigate = useNavigate();
+
+  const pages: { [url: string]: PageMeta } = {
+    configuration: {
+      icon: IconFileSettings,
+      label: "Configuration",
+      disabled: false,
+    },
+    logging: {
+      icon: IconGraph,
+      label: "Logging",
+      disabled: false,
+    },
+    logViewer: {
+      icon: IconDeviceAnalytics,
+      label: "Log Viewer",
+      disabled: false,
+    },
+    monitoring: {
+      icon: IconDeviceDesktopSearch,
+      label: "Monitoring",
+      disabled: false,
+    },
+  };
+
+  const navbarHeight = "2rem";
+
+  const applyTheme = (theme: "light" | "dark") => {
+    document.documentElement.dataset.theme = theme;
+    setGlobalState("theme", theme);
+    localStorage.setItem("theme", theme);
+  };
+
+  const toggleTheme = () => {
+    applyTheme(globalState.theme === "light" ? "dark" : "light");
+  };
+
+  createEffect(
+    on(
+      () => page(),
+      () => {
+        if (page() !== Pages.None) {
+          navigate("/" + page().toLowerCase(), {
+            replace: true,
+          });
+        }
+      },
+      { defer: true },
+    ),
+  );
+
+  onCleanup(async () => {
+    unlistenDragDropEvent();
+  });
+
+  return (
+    <GlobalStateContext.Provider value={{ globalState, setGlobalState }}>
+      <div
+        style={{
+          width: navbarHeight,
+          height: "100vh",
+          position: "fixed",
+        }}
+        onDrop={(e) => e.stopPropagation()}
+      >
+        <div
+          class={css({ background: "gray.2" })}
+          style={{
+            width: "100vw",
+            height: navbarHeight,
+            display: "grid",
+            "grid-template-columns": `calc(100% - 4rem) 2rem 2rem`,
+            "border-bottom-width": "1px",
+          }}
+        >
+          <div
+            id="collapsed_side_bar"
+            style={{
+              width: `100%`,
+              height: `calc(${navbarHeight} - 1px)`,
+              "border-width": "0",
+              "grid-row": 1,
+              "grid-column": 1,
+              "align-items": "center",
+              "padding-left": "0.1rem",
+            }}
+          >
+            <Index each={Object.keys(pages)}>
+              {(val) => (
+                <Button
+                  class={css({
+                    width: "min-content",
+                    height: navbarHeight,
+                    alignItems: "center",
+                    whiteSpace: "nowrap",
+                    transition: "background ease-in-out 0.2s",
+                    _hover: {
+                      background:
+                        page() === val()
+                          ? "transparent"
+                          : "gray.plain.bg.hover",
+                    },
+                  })}
+                  variant="plain"
+                  disabled={pages[val()].disabled}
+                  onClick={() => setPage(val() as Pages)}
+                >
+                  <Text
+                    textStyle="sm"
+                    opacity={page().toString() === val() ? "1" : "0.6"}
+                  >
+                    {pages[val()].label}
+                  </Text>
+                </Button>
+              )}
+            </Index>
+          </div>
+          <IconButton
+            variant="plain"
+            onclick={toggleTheme}
+            size="xs"
+            gridRow={1}
+            gridColumn={2}
+          >
+            <Show
+              when={globalState.theme === "dark"}
+              fallback={<IconSunFilled />}
+            >
+              <IconMoonFilled />
+            </Show>
+          </IconButton>
+          <Popover.Root>
+            <Popover.Trigger gridRow={1} gridColumn={3}>
+              <IconButton size="xs" variant="plain">
+                <IconInfoCircle />
+              </IconButton>
+            </Popover.Trigger>
+            <Portal>
+              <Popover.Positioner>
+                <Popover.Content background={"gray.1"} padding="0.5rem">
+                  <Popover.Arrow>
+                    <Popover.ArrowTip />
+                  </Popover.Arrow>
+                  <div
+                    id="versions-footer"
+                    style={{
+                      display: "grid",
+                      "grid-template-columns": "6rem auto",
+                    }}
+                  >
+                    <Text
+                      textStyle="sm"
+                      fontWeight="light"
+                      style={{
+                        "grid-row": 1,
+                        "grid-column": 1,
+                      }}
+                    >
+                      <i>GUI Version:</i>
+                    </Text>
+                    <Text
+                      textStyle="sm"
+                      fontWeight="light"
+                      style={{
+                        "grid-row": 1,
+                        "grid-column": 2,
+                      }}
+                    >
+                      {version()}
+                    </Text>
+                    <Text
+                      textStyle="sm"
+                      fontWeight="light"
+                      style={{
+                        "grid-row": 2,
+                        "grid-column": 1,
+                      }}
+                    >
+                      <i>CLI Version:</i>
+                    </Text>
+                    <Text
+                      textStyle="sm"
+                      fontWeight="light"
+                      style={{
+                        "grid-row": 2,
+                        "grid-column": 2,
+                      }}
+                    >
+                      {cliVersion()}
+                    </Text>
+                    <Text
+                      textStyle="sm"
+                      fontWeight="light"
+                      style={{
+                        "grid-row": 3,
+                        "grid-column": 1,
+                      }}
+                    >
+                      <i>Lib Version:</i>
+                    </Text>
+                    <Text
+                      textStyle="sm"
+                      fontWeight="light"
+                      style={{
+                        "grid-row": 3,
+                        "grid-column": 2,
+                      }}
+                    >
+                      {driverComVersion()}
+                    </Text>
+                    <Text
+                      textStyle="sm"
+                      fontWeight="light"
+                      style={{
+                        "grid-row": 4,
+                        "grid-column": 1,
+                      }}
+                    >
+                      <i>API Version:</i>
+                    </Text>
+                    <Text
+                      textStyle="sm"
+                      fontWeight="light"
+                      style={{
+                        "grid-row": 4,
+                        "grid-column": 2,
+                      }}
+                    >
+                      {apiVersion()}
+                    </Text>
+                  </div>
+                  <Text
+                    as="div"
+                    textStyle="sm"
+                    fontWeight="light"
+                    textAlign="center"
+                    marginTop="0.5rem"
+                  >
+                    <i>{`Copyright © 2024-${new Date().getFullYear()} PMF, Inc.`}</i>
+                  </Text>
+                </Popover.Content>
+              </Popover.Positioner>
+            </Portal>
+          </Popover.Root>
+        </div>
+      </div>
+      <div
+        style={{
+          width: "100vw",
+          height: `calc(100vh - ${navbarHeight})`,
+          "margin-top": navbarHeight,
+          position: "fixed",
+        }}
+      >
+        {props.children}
+      </div>
+      <Show when={page() !== Pages.None}>
+        <DownloadList
+          style={{ position: "absolute", right: "1rem", bottom: "1rem" }}
+        />
+      </Show>
+      <Toaster />
+
+      <Show
+        when={
+          overlayTop() != null &&
+          overlayLeft() != null &&
+          overlayHeight() != null &&
+          overlayWidth() != null
+        }
+      >
+        <Stack
+          background={"fg.default"}
+          opacity={"10%"}
+          style={{
+            top: `${overlayTop()!}px`,
+            height: `${overlayHeight()!}px`,
+            width: `${overlayWidth()!}px`,
+            left: `${overlayLeft()!}px`,
+            position: "absolute",
+            "pointer-events": "none",
+            "z-index": "10",
+          }}
+        />
+      </Show>
+    </GlobalStateContext.Provider>
+  );
+}
+
+export default App;

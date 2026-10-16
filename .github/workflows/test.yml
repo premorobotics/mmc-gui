@@ -1,0 +1,82 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [Windows, Linux]
+    runs-on: [self-hosted, "${{ matrix.os }}"]
+    steps:
+      - name: Log masks on Linux
+        if: matrix.os == 'Linux'
+        run: echo "::add-mask::$NAME_MASK"
+
+      - name: Log masks on Windows
+        if: matrix.os == 'Windows'
+        run: echo "::add-mask::$env:NAME_MASK"
+
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@1.98.0
+        with:
+          components: clippy, rustfmt
+
+      - name: Install pnpm
+        uses: pnpm/setup@v1
+        with:
+          version: 12.3.3
+
+      - name: Install dependencies
+        run: pnpm i --frozen-lockfile
+
+      - name: Check formatting
+        run: pnpm fmt-check
+
+      - name: Generate proto files
+        run: pnpm mmc-api
+        env:
+          GH_TOKEN: ${{ secrets.DRIVERCOM_CLI_RELEASE_ACCESS_TOKEN }}
+
+      - name: Generate config types
+        run: pnpm drivercom
+        env:
+          GH_TOKEN: ${{ secrets.DRIVERCOM_CLI_RELEASE_ACCESS_TOKEN }}
+
+      - name: Check lints and types
+        run: pnpm check
+
+      - name: Run test
+        run: pnpm test
+
+      - name: Cargo Verify Project
+        working-directory: ./src-tauri
+        run: cargo verify-project
+
+      - name: Cargo Format
+        working-directory: ./src-tauri
+        run: cargo fmt --check
+
+      - name: Cargo Build
+        run: pnpm tauri build --verbose
+        env:
+          GH_TOKEN: ${{ secrets.DRIVERCOM_CLI_RELEASE_ACCESS_TOKEN }}
+
+      - name: Cargo Test
+        working-directory: ./src-tauri
+        run: cargo test --verbose
+
+      - name: Cargo Clippy
+        working-directory: ./src-tauri
+        run: cargo clippy --no-deps -- -W clippy::pedantic

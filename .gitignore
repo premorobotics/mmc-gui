@@ -1,0 +1,11 @@
+node_modules
+dist
+## Panda
+styled-system
+styled-system-studio
+.vite
+
+src-tauri/binaries
+src-tauri/generated
+src-tauri/resources
+src/proto
