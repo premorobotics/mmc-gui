@@ -15,7 +15,7 @@ import {
   LineCommandParameters,
 } from "./LineControlButton.tsx";
 import { SendingCommand } from "./System.tsx";
-import { Line as LineType, LineConfig } from "../Monitoring.tsx";
+import { Line as LineType, LineConfig } from "../../../pages/Monitoring.tsx";
 
 export type LineProps = JSX.HTMLAttributes<HTMLDivElement> & {
   line: LineConfig;

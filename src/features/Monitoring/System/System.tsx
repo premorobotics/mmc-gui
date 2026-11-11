@@ -16,7 +16,7 @@ import {
 } from "@thisbeyond/solid-dnd";
 import { Stack } from "styled-system/jsx/stack";
 import { LineCommandParameters } from "./LineControlButton.tsx";
-import { Line as LineType, LineConfig } from "../Monitoring.tsx";
+import { Line as LineType, LineConfig } from "../../../pages/Monitoring.tsx";
 
 export type SendingCommand = {
   line: string;

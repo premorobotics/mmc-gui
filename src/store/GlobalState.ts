@@ -4,7 +4,7 @@ import { PanelSizeContext } from "~/components/Panel/PanelLayout.tsx";
 import { TabListContext } from "~/components/Tab/TabList.tsx";
 import { Child } from "@tauri-apps/plugin-shell";
 import { DownloadStates } from "~/components/DownloadList.tsx";
-import { IpAddress } from "~/pages/Monitoring/System/IpHistory.tsx";
+import { IpAddress } from "~/features/Monitoring/MonitoringSidebar/IpHistory";
 
 const [globalState, setGlobalState] = createStore({
   theme: "light",

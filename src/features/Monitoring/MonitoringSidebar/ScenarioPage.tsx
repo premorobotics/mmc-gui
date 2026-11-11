@@ -9,11 +9,11 @@ import {
 import { toaster } from "~/components/ui/toast.tsx";
 import { css } from "styled-system/css";
 import { Button } from "~/components/ui/button";
-import { MmcCommandWebsocket } from "~/services/MmcCommandWebsocket";
+import { MmcCommandWebsocket } from "~/features/Monitoring/Websocket/MmcCommandWebsocket";
 import { Response_Line_Carrier_State_State } from "~/proto/mmc/info_pb";
 import { Control } from "~/proto/mmc/control_pb";
 import { CarrierState } from "./CarrierPage";
-import { LineConfig } from "../Monitoring";
+import { LineConfig } from "../../../pages/Monitoring";
 import { ScenarioScriptBlock } from "./ScenarioPage/ScenarioScriptBlock";
 import { ScriptList } from "./ScenarioPage/ScriptList";
 
