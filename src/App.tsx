@@ -22,8 +22,6 @@ import {
 } from "@tabler/icons-solidjs";
 
 import {
-  cliVersion,
-  driverComVersion,
   globalState,
   GlobalStateContext,
   page,
@@ -33,14 +31,11 @@ import {
   Theme,
   setApiVersion,
   apiVersion,
-  setRecentConfigFilePaths,
-  setRecentLogFilePaths,
   setIpHistory,
 } from "./store/GlobalState.ts";
 
 import { Text } from "~/components/ui/text.tsx";
 
-import { DownloadList } from "./components/DownloadList.tsx";
 //@ts-ignore This file is generate after run compiler.
 import api from "src-tauri/generated/api.json";
 import { load } from "@tauri-apps/plugin-store";
@@ -100,26 +95,10 @@ function App(props: RouteSectionProps) {
   async function getStoreValues() {
     const store = await load("store.json", {
       defaults: {
-        configFilePath: undefined,
-        logFilePath: undefined,
         ipHistory: undefined,
       },
       autoSave: false,
     });
-    const hasConfigRecentFiles = await store.has("configFilePath");
-    if (hasConfigRecentFiles) {
-      const getRecentConfigs: string[] = (await store.get(
-        "configFilePath",
-      )) as string[];
-      setRecentConfigFilePaths(getRecentConfigs);
-    }
-    const hasLogRecentFiles = await store.has("logFilePath");
-    if (hasLogRecentFiles) {
-      const getRecentLogs: string[] = (await store.get(
-        "logFilePath",
-      )) as string[];
-      setRecentLogFilePaths(getRecentLogs);
-    }
     const hasIpHistory = await store.has("ipHistory");
     if (hasIpHistory) {
       const getIpHistory = (await store.get("ipHistory")) as IpAddress[];
@@ -296,53 +275,13 @@ function App(props: RouteSectionProps) {
                         "grid-column": 1,
                       }}
                     >
-                      <i>CLI Version:</i>
-                    </Text>
-                    <Text
-                      textStyle="sm"
-                      fontWeight="light"
-                      style={{
-                        "grid-row": 2,
-                        "grid-column": 2,
-                      }}
-                    >
-                      {cliVersion()}
-                    </Text>
-                    <Text
-                      textStyle="sm"
-                      fontWeight="light"
-                      style={{
-                        "grid-row": 3,
-                        "grid-column": 1,
-                      }}
-                    >
-                      <i>Lib Version:</i>
-                    </Text>
-                    <Text
-                      textStyle="sm"
-                      fontWeight="light"
-                      style={{
-                        "grid-row": 3,
-                        "grid-column": 2,
-                      }}
-                    >
-                      {driverComVersion()}
-                    </Text>
-                    <Text
-                      textStyle="sm"
-                      fontWeight="light"
-                      style={{
-                        "grid-row": 4,
-                        "grid-column": 1,
-                      }}
-                    >
                       <i>API Version:</i>
                     </Text>
                     <Text
                       textStyle="sm"
                       fontWeight="light"
                       style={{
-                        "grid-row": 4,
+                        "grid-row": 2,
                         "grid-column": 2,
                       }}
                     >
@@ -374,11 +313,6 @@ function App(props: RouteSectionProps) {
       >
         {props.children}
       </div>
-      <Show when={page() !== Pages.None}>
-        <DownloadList
-          style={{ position: "absolute", right: "1rem", bottom: "1rem" }}
-        />
-      </Show>
       <Toaster />
     </GlobalStateContext.Provider>
   );
