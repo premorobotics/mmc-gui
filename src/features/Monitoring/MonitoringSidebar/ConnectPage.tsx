@@ -4,7 +4,7 @@ import {
   detectedServer,
   setDetectedServer,
 } from "~/store/GlobalState";
-import { IpAddress, IpHistory } from "../System/IpHistory";
+import { IpAddress, IpHistory } from "./IpHistory";
 import { createEffect, onCleanup, Setter } from "solid-js";
 import { Button } from "~/components/ui/button";
 import { Show } from "solid-js";
@@ -12,7 +12,7 @@ import { CreateToasterReturn } from "@ark-ui/solid";
 import { css } from "styled-system/css";
 import { createSignal } from "solid-js";
 import { invoke } from "@tauri-apps/api/core";
-import { MonitoringWebsocket } from "~/services/MonitoringWebsocket";
+import { MonitoringWebsocket } from "~/features/Monitoring/Websocket/MonitoringWebsocket";
 import { CloseButton } from "~/components/ui/close-button";
 
 export type ConnectPageProps = {

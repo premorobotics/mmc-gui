@@ -5,7 +5,7 @@ import {
   type Request as CommandRequest,
 } from "~/proto/mmc/command_pb";
 import { Input } from "~/components/ui/input";
-import { LineConfig } from "../../Monitoring";
+import { LineConfig } from "~/pages/Monitoring";
 import { createListCollection } from "@ark-ui/solid";
 import { Select } from "~/components/Customize/Select";
 import { prettierLabel } from "~/utils/PrettierLabel";

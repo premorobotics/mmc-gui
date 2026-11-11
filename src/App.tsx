@@ -44,7 +44,7 @@ import { DownloadList } from "./components/DownloadList.tsx";
 //@ts-ignore This file is generate after run compiler.
 import api from "src-tauri/generated/api.json";
 import { load } from "@tauri-apps/plugin-store";
-import { IpAddress } from "./pages/Monitoring/System/IpHistory.tsx";
+import { IpAddress } from "./features/Monitoring/MonitoringSidebar/IpHistory.tsx";
 import { Toaster } from "./components/ui/toast.tsx";
 import { css } from "styled-system/css/css";
 import * as Popover from "./components/ui/popover.tsx";

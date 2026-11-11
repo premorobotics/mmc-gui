@@ -1,5 +1,5 @@
 import { createSignal, onMount, onCleanup, createEffect, on } from "solid-js";
-import * as Splitter from "../../components/ui/splitter.tsx";
+import * as Splitter from "../components/ui/splitter.tsx";
 import { IconButton } from "~/components/ui/icon-button.tsx";
 import { IconChevronDown, IconChevronUp } from "@tabler/icons-solidjs";
 import { css } from "styled-system/css/css";
@@ -11,28 +11,28 @@ import {
   setIpHistory,
 } from "~/store/GlobalState.ts";
 import { createStore } from "solid-js/store";
-import { IpAddress } from "~/pages/Monitoring/System/IpHistory.tsx";
+import { IpAddress } from "~/features/Monitoring/MonitoringSidebar/IpHistory.tsx";
 import * as Tabs from "~/components/ui/tabs.tsx";
-import { ControlPage } from "./MonitoringSidebar/ControlPage.tsx";
-import { ConnectState, ConnectPage } from "./MonitoringSidebar/ConnectPage.tsx";
-import { SendingCommand, System } from "./System/System.tsx";
+import { ControlPage } from "../features/Monitoring/MonitoringSidebar/ControlPage.tsx";
+import { ConnectState, ConnectPage } from "../features/Monitoring/MonitoringSidebar/ConnectPage.tsx";
+import { SendingCommand, System } from "../features/Monitoring/System/System.tsx";
 import {
   Response_Line,
   Response_Line_Axis_Error,
   Response_Line_Driver_Error,
 } from "~/proto/mmc/info_pb.ts";
-import { StatusPage } from "./MonitoringSidebar/StatusPage.tsx";
+import { StatusPage } from "../features/Monitoring/MonitoringSidebar/StatusPage.tsx";
 import { reconcile } from "solid-js/store";
-import CarrierPage, { CarrierState } from "./MonitoringSidebar/CarrierPage.tsx";
+import CarrierPage, { CarrierState } from "../features/Monitoring/MonitoringSidebar/CarrierPage.tsx";
 import { load } from "@tauri-apps/plugin-store";
 import { toaster } from "~/components/ui/toast.tsx";
 import { Request_Direction } from "~/proto/mmc/command_pb.ts";
 import { Control } from "~/proto/mmc/control_pb.ts";
-import { MonitoringWebsocket } from "~/services/MonitoringWebsocket.ts";
-import { MmcCommandWebsocket } from "~/services/MmcCommandWebsocket.ts";
+import { MonitoringWebsocket } from "~/features/Monitoring/Websocket/MonitoringWebsocket.ts";
+import { MmcCommandWebsocket } from "~/features/Monitoring/Websocket/MmcCommandWebsocket.ts";
 import { Response_TrackConfig_Line } from "~/proto/mmc/core_pb.ts";
-import { WebSocketError } from "~/services/WebsocketManager.ts";
-import { ScenarioPage } from "./MonitoringSidebar/ScenarioPage.tsx";
+import { WebSocketError } from "~/features/Monitoring/Websocket/WebsocketManager.ts";
+import { ScenarioPage } from "../features/Monitoring/MonitoringSidebar/ScenarioPage.tsx";
 
 export type LineConfig = Omit<
   Response_TrackConfig_Line,

@@ -13,7 +13,7 @@ import { IconButton } from "~/components/ui/icon-button";
 import { IconX } from "@tabler/icons-solidjs";
 import { css } from "styled-system/css";
 
-import { LineConfig } from "../../Monitoring";
+import { LineConfig } from "~/pages/Monitoring";
 import { ScenarioCommand } from "../ScenarioPage";
 import { MmcCommandBlock } from "./MmcCommandBlock";
 import { WaitCommandBlock } from "./WaitCommandBlock";
