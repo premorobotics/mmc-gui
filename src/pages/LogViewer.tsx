@@ -2,7 +2,7 @@ import { Panel } from "~/components/Panel/Panel";
 import { PanelLayout } from "~/components/Panel/PanelLayout";
 import { TabContext, TabList } from "~/components/Tab/TabList";
 import { Pages, tabStore } from "~/store/GlobalState";
-import { LogViewerTabPageContent } from "./LogViewerTabPageContent";
+import { LogViewerTabPageContent } from "../features/LogViewer/LogViewerTabPageContent";
 import { open } from "@tauri-apps/plugin-dialog";
 import { toaster } from "~/components/ui/toast.tsx";
 
