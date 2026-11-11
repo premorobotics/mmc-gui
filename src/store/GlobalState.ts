@@ -25,7 +25,6 @@ export const GlobalStateContext = createContext<{
   setGlobalState: SetStoreFunction<GlobalState>;
 }>();
 
-
 export const [apiVersion, setApiVersion] = createSignal<string>("");
 
 type PageKeys = Map<string, string>;
