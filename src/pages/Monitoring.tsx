@@ -14,8 +14,14 @@ import { createStore } from "solid-js/store";
 import { IpAddress } from "~/features/Monitoring/MonitoringSidebar/IpHistory.tsx";
 import * as Tabs from "~/components/ui/tabs.tsx";
 import { ControlPage } from "../features/Monitoring/MonitoringSidebar/ControlPage.tsx";
-import { ConnectState, ConnectPage } from "../features/Monitoring/MonitoringSidebar/ConnectPage.tsx";
-import { SendingCommand, System } from "../features/Monitoring/System/System.tsx";
+import {
+  ConnectState,
+  ConnectPage,
+} from "../features/Monitoring/MonitoringSidebar/ConnectPage.tsx";
+import {
+  SendingCommand,
+  System,
+} from "../features/Monitoring/System/System.tsx";
 import {
   Response_Line,
   Response_Line_Axis_Error,
@@ -23,7 +29,9 @@ import {
 } from "~/proto/mmc/info_pb.ts";
 import { StatusPage } from "../features/Monitoring/MonitoringSidebar/StatusPage.tsx";
 import { reconcile } from "solid-js/store";
-import CarrierPage, { CarrierState } from "../features/Monitoring/MonitoringSidebar/CarrierPage.tsx";
+import CarrierPage, {
+  CarrierState,
+} from "../features/Monitoring/MonitoringSidebar/CarrierPage.tsx";
 import { load } from "@tauri-apps/plugin-store";
 import { toaster } from "~/components/ui/toast.tsx";
 import { Request_Direction } from "~/proto/mmc/command_pb.ts";
