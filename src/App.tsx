@@ -112,14 +112,14 @@ function App(props: RouteSectionProps) {
   const navigate = useNavigate();
 
   const pages: { [url: string]: PageMeta } = {
-    logViewer: {
-      icon: IconDeviceAnalytics,
-      label: "Log Viewer",
-      disabled: true,
-    },
     monitoring: {
       icon: IconDeviceDesktopSearch,
       label: "Monitoring",
+      disabled: false,
+    },
+    logViewer: {
+      icon: IconDeviceAnalytics,
+      label: "Log Viewer",
       disabled: false,
     },
   };
