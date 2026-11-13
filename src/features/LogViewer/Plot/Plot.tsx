@@ -5,7 +5,6 @@ import {
   JSX,
   on,
   onCleanup,
-  onMount,
   Show,
   splitProps,
   useContext,
@@ -16,15 +15,10 @@ import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
 
 import { GlobalStateContext } from "~/store/GlobalState";
-import * as ToggleGroup from "~/components/ui/toggle-group";
 import { IconButton } from "~/components/ui/icon-button";
 import {
-  IconArrowsMove,
-  IconArrowsMoveHorizontal,
-  IconArrowsMoveVertical,
   IconChevronLeftPipe,
   IconChevronRightPipe,
-  IconCrosshair,
   IconEye,
   IconEyeOff,
   IconLocation,
@@ -41,13 +35,14 @@ import * as Splitter from "~/components/ui/splitter";
 import type { CursorPluginMessageBus } from "@dschz/solid-uplot/plugins";
 import { SolidUplot, createPluginBus } from "@dschz/solid-uplot";
 import type { UplotPluginFactory } from "@dschz/solid-uplot";
-
 import { cursor, tooltip } from "@dschz/solid-uplot/plugins";
 import { PlotToolTip } from "./PlotTooltip";
 import { clamp } from "~/utils/PlotCalculation";
 import { getComputedCSSVariableValue } from "~/utils/GetComputedCssVariableValue";
 import { fuzzySearch } from "~/utils/FuzzySearch";
 import { COLOR_PALETTE } from "./ColorPalette";
+import { CursorModeToggleGroup } from "./CursorMode/CursorModeToggleGroup";
+import { createCursorMode, CursorMode } from "./CursorMode/CreateCursorMode";
 
 export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
   id: string;
@@ -75,14 +70,6 @@ export type PlotContext = {
   style: LegendStroke[];
   selected: boolean[];
 };
-
-enum CursorMode {
-  None,
-  Pan,
-  Horizontal,
-  Lock,
-  Vertical,
-}
 
 export function Plot(props: PlotProps) {
   const [, rest] = splitProps(props, [
@@ -245,36 +232,6 @@ export function Plot(props: PlotProps) {
     };
   };
 
-  // Current cursor mode; changes dynamically with keypresses.
-  const [cursorMode, setCursorMode] = createSignal(CursorMode.Pan);
-  // Last manually set cursor mode, changes only in toggle group.
-  const [lastCursorMode, setLastCursorMode] = createSignal(CursorMode.Pan);
-
-  const cursorModeActivate = (event: KeyboardEvent) => {
-    if (event.key === "Control") {
-      setCursorMode(CursorMode.Vertical);
-    } else if (event.key === "Shift") {
-      if (enterSplitter()) {
-        return;
-      }
-      setCursorMode(CursorMode.Horizontal);
-    } else if (event.key === "Alt") {
-      setCursorMode(CursorMode.Lock);
-    }
-  };
-  const cursorModeRelease = (event: KeyboardEvent) => {
-    if (event.key === "Control" && cursorMode() === CursorMode.Vertical) {
-      setCursorMode(lastCursorMode());
-    } else if (
-      event.key === "Shift" &&
-      cursorMode() === CursorMode.Horizontal
-    ) {
-      setCursorMode(lastCursorMode());
-    } else if (event.key === "Alt" && cursorMode() === CursorMode.Lock) {
-      setCursorMode(lastCursorMode());
-    }
-  };
-
   const [dotFilter, setDotFilter] = createSignal<number[]>([]);
   const checkDotFilter = () => dotFilter();
   const [xScale, setXScale] = createSignal<{ xMin: number; xMax: number }>(
@@ -315,14 +272,7 @@ export function Plot(props: PlotProps) {
     ),
   );
 
-  onMount(() => {
-    document.addEventListener("keydown", cursorModeActivate);
-    document.addEventListener("keyup", cursorModeRelease);
-  });
-
   onCleanup(() => {
-    document.removeEventListener("keydown", cursorModeActivate);
-    document.removeEventListener("keyup", cursorModeRelease);
     plot.destroy();
   });
 
@@ -382,7 +332,6 @@ export function Plot(props: PlotProps) {
   });
 
   const [prevSelect, setPrevSelect] = createSignal<number | null>(null);
-  const [enterSplitter, setEnterSplitter] = createSignal<boolean>(false);
   const multiSelect = (
     index: number,
     prevIndex: number,
@@ -409,6 +358,12 @@ export function Plot(props: PlotProps) {
       return;
     }
   };
+
+  const [isPointerOverLegend, setIsPointerOverLegend] =
+    createSignal<boolean>(false);
+  const cursorMode = createCursorMode({
+    isShortcutBlocked: (key) => key === "Shift" && isPointerOverLegend(),
+  });
 
   const wheelZoomPlugin = (opts: {
     factor: number;
@@ -487,7 +442,7 @@ export function Plot(props: PlotProps) {
               let nyMax = nyMin + nyRange;
               [nyMin, nyMax] = clamp(nyRange, nyMin, nyMax, yRange, yMin, yMax);
 
-              if (cursorMode() === CursorMode.Vertical) {
+              if (cursorMode.mode() === CursorMode.Vertical) {
                 u.setScale("y", { min: nyMin, max: nyMax });
               } else {
                 uPlot.sync(opts.group).plots.forEach((up: uPlot) => {
@@ -627,7 +582,7 @@ export function Plot(props: PlotProps) {
             id={props.id}
             style={{ width: `calc(100% - 2.5rem)`, height: "100%" }}
             onMouseLeave={() => {
-              if (cursorMode() !== CursorMode.Lock) {
+              if (cursorMode.mode() !== CursorMode.Lock) {
                 setCursorIdx(null);
               }
             }}
@@ -649,7 +604,7 @@ export function Plot(props: PlotProps) {
                     return (e) => {
                       if (e.button == 0) {
                         // Always release cursor lock if not control-clicking.
-                        if (cursorMode() !== CursorMode.Lock) {
+                        if (cursorMode.mode() !== CursorMode.Lock) {
                           // @ts-ignore: TSC unable to detect `_lock` field
                           if (u.cursor._lock) {
                             uPlot.sync(group()).plots.forEach((up) => {
@@ -668,7 +623,7 @@ export function Plot(props: PlotProps) {
                           return null;
                         }
 
-                        if (cursorMode() === CursorMode.Horizontal) {
+                        if (cursorMode.mode() === CursorMode.Horizontal) {
                           const domRect = u.over.getBoundingClientRect();
                           const uPlotDivLeft = domRect.left;
                           const uPlotDivTop = domRect.y;
@@ -729,7 +684,7 @@ export function Plot(props: PlotProps) {
 
                           document.addEventListener("mousemove", onmove);
                           document.addEventListener("mouseup", onup);
-                        } else if (cursorMode() === CursorMode.Pan) {
+                        } else if (cursorMode.mode() === CursorMode.Pan) {
                           const xMin = 0;
                           const xMax = u.data[0].length - 1;
 
@@ -815,7 +770,7 @@ export function Plot(props: PlotProps) {
 
                           document.addEventListener("mousemove", onmove);
                           document.addEventListener("mouseup", onup);
-                        } else if (cursorMode() === CursorMode.Vertical) {
+                        } else if (cursorMode.mode() === CursorMode.Vertical) {
                           const y0 = e.clientY;
                           setYMin(e.clientY);
                           const domRec = u.over.getBoundingClientRect();
@@ -894,7 +849,7 @@ export function Plot(props: PlotProps) {
                     return (e) => {
                       e.stopPropagation();
 
-                      if (cursorMode() === CursorMode.Horizontal) {
+                      if (cursorMode.mode() === CursorMode.Horizontal) {
                         uPlot.sync(group()).plots.forEach((up) => {
                           up.setScale("y", {
                             min: up.scales.y.min!,
@@ -905,7 +860,7 @@ export function Plot(props: PlotProps) {
                             max: u.data[0].length - 1,
                           });
                         });
-                      } else if (cursorMode() === CursorMode.Vertical) {
+                      } else if (cursorMode.mode() === CursorMode.Vertical) {
                         uPlot.sync(group()).plots.forEach((up) => {
                           up.setScale("y", {
                             min: yScale().min,
@@ -1074,16 +1029,6 @@ export function Plot(props: PlotProps) {
               "align-items": "normal",
               "border-radius": "0",
             }}
-            onMouseEnter={() => {
-              setEnterSplitter(true);
-              setCursorMode(lastCursorMode());
-            }}
-            onMouseLeave={(e) => {
-              if (e.shiftKey) {
-                setCursorMode(CursorMode["Horizontal"]);
-              }
-              setEnterSplitter(false);
-            }}
             flexDir={"column"}
           >
             <Stack
@@ -1118,125 +1063,11 @@ export function Plot(props: PlotProps) {
                     <IconZoomReset />
                   </IconButton>
                 </Tooltip>
-
-                <ToggleGroup.Root
-                  value={[CursorMode[lastCursorMode()]]}
-                  onValueChange={(details) => {
-                    if (details.value.length > 0) {
-                      setCursorMode(
-                        CursorMode[details.value[0] as keyof typeof CursorMode],
-                      );
-                      setLastCursorMode(cursorMode());
-                    } else {
-                      setCursorMode(CursorMode.None);
-                      setCursorMode(lastCursorMode());
-                    }
-                  }}
-                >
-                  <Tooltip content="Plot Panning">
-                    <ToggleGroup.Item
-                      value={CursorMode[CursorMode.Pan]}
-                      aria-label="Toggle Pan"
-                      color={
-                        cursorMode() === CursorMode.Pan
-                          ? "fg.default"
-                          : "fg.muted"
-                      }
-                      bgColor={
-                        cursorMode() === CursorMode.Pan ? "gray.3" : "gray.1"
-                      }
-                      _hover={{
-                        background:
-                          cursorMode() === CursorMode.Pan ? "gray.3" : "gray.2",
-                      }}
-                      padding="0.4rem"
-                      borderWidth="1px"
-                      borderRadius="0.3rem 0 0 0.3rem"
-                    >
-                      <IconArrowsMove />
-                    </ToggleGroup.Item>
-                  </Tooltip>
-
-                  <Tooltip content="Horizontal Zoom (Shift)">
-                    <ToggleGroup.Item
-                      value={CursorMode[CursorMode.Horizontal]}
-                      aria-label="Toggle Selection Zoom"
-                      color={
-                        cursorMode() === CursorMode.Horizontal
-                          ? "fg.default"
-                          : "fg.muted"
-                      }
-                      bgColor={
-                        cursorMode() === CursorMode.Horizontal
-                          ? "gray.3"
-                          : "gray.1"
-                      }
-                      _hover={{
-                        background:
-                          cursorMode() === CursorMode.Horizontal
-                            ? "gray.3"
-                            : "gray.2",
-                      }}
-                      padding="0.4rem"
-                      borderWidth="1px 1px 1px 0px"
-                    >
-                      <IconArrowsMoveHorizontal />
-                    </ToggleGroup.Item>
-                  </Tooltip>
-
-                  <Tooltip content="Vertical Zoom (Ctrl)">
-                    <ToggleGroup.Item
-                      value={CursorMode[CursorMode.Vertical]}
-                      aria-label="Toggle Cursor Lock"
-                      color={
-                        cursorMode() === CursorMode.Vertical
-                          ? "fg.default"
-                          : "fg.muted"
-                      }
-                      bgColor={
-                        cursorMode() === CursorMode.Vertical
-                          ? "gray.3"
-                          : "gray.1"
-                      }
-                      _hover={{
-                        background:
-                          cursorMode() === CursorMode.Vertical
-                            ? "gray.3"
-                            : "gray.2",
-                      }}
-                      padding="0.4rem"
-                      borderWidth="1px 1px 1px 0px"
-                    >
-                      <IconArrowsMoveVertical />
-                    </ToggleGroup.Item>
-                  </Tooltip>
-
-                  <Tooltip content="Cursor Lock (Alt)">
-                    <ToggleGroup.Item
-                      value={CursorMode[CursorMode.Lock]}
-                      aria-label="Toggle Cursor Lock"
-                      color={
-                        cursorMode() === CursorMode.Lock
-                          ? "fg.default"
-                          : "fg.muted"
-                      }
-                      bgColor={
-                        cursorMode() === CursorMode.Lock ? "gray.3" : "gray.1"
-                      }
-                      _hover={{
-                        background:
-                          cursorMode() === CursorMode.Lock
-                            ? "gray.3"
-                            : "gray.2",
-                      }}
-                      padding="0.4rem"
-                      borderWidth="1px 1px 1px 0px"
-                      borderRadius="0 0.3rem 0.3rem 0"
-                    >
-                      <IconCrosshair />
-                    </ToggleGroup.Item>
-                  </Tooltip>
-                </ToggleGroup.Root>
+                <CursorModeToggleGroup
+                  lastCursorMode={cursorMode.baseMode()}
+                  cursorMode={cursorMode.mode()}
+                  onCursorModeChange={cursorMode.select}
+                />
               </Stack>
             </Stack>
 
@@ -1328,6 +1159,16 @@ export function Plot(props: PlotProps) {
                 "overflow-y": "auto",
                 gap: 0,
                 "padding-left": "0.5rem",
+              }}
+              onMouseEnter={() => {
+                setIsPointerOverLegend(true);
+                cursorMode.reset();
+              }}
+              onMouseLeave={(e) => {
+                if (e.shiftKey) {
+                  cursorMode.setMode(CursorMode.Horizontal);
+                }
+                setIsPointerOverLegend(false);
               }}
             >
               <Show when={render()}>
