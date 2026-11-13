@@ -36,8 +36,6 @@ export type LegendProps = Omit<StackProps, "stroke"> & {
   onVisibleChange?: (new_visible: boolean, shiftKey: boolean) => void;
   color?: string;
   onColorChange?: (new_color: string) => void;
-  palette?: string[];
-  onPaletteChange?: (new_palette: string[]) => void;
   stroke?: LegendStroke;
   onStrokeChange?: (new_style: LegendStroke) => void;
   readonly?: boolean;
@@ -206,7 +204,6 @@ export function Legend(props: LegendProps) {
                   series={props.series}
                   color={color()}
                   stroke={stroke()}
-                  palette={props.palette}
                   onSave={(new_color, new_style) => {
                     props.onColorChange?.(new_color);
                     props.onStrokeChange?.(new_style);

@@ -15,10 +15,10 @@ import {
 import * as ToggleGroup from "~/components/ui/toggle-group";
 import { LegendStroke } from "./Legend";
 import { css } from "styled-system/css";
+import { COLOR_PALETTE } from "./ColorPalette";
 
 export type SeriesConfigurationProps = Omit<ColorPicker.RootProps, "stroke"> & {
   series: string;
-  palette?: string[];
   color?: string;
   stroke?: LegendStroke;
   onSave?: (new_color: string, new_style: LegendStroke) => void;
@@ -28,7 +28,6 @@ export type SeriesConfigurationProps = Omit<ColorPicker.RootProps, "stroke"> & {
 export function SeriesConfiguration(props: SeriesConfigurationProps) {
   const [, rest] = splitProps(props, [
     "series",
-    "palette",
     "color",
     "stroke",
     "onSave",
@@ -108,7 +107,7 @@ export function SeriesConfiguration(props: SeriesConfigurationProps) {
             Color Palette
           </Heading>
           <ColorPicker.SwatchGroup>
-            <For each={props.palette}>
+            <For each={COLOR_PALETTE}>
               {(color) => (
                 <ColorPicker.SwatchTrigger value={color}>
                   <ColorPicker.Swatch value={color} />

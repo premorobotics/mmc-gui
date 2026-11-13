@@ -47,6 +47,7 @@ import { PlotToolTip } from "./PlotTooltip";
 import { clamp } from "~/utils/PlotCalculation";
 import { getComputedCSSVariableValue } from "~/utils/GetComputedCssVariableValue";
 import { fuzzySearch } from "~/utils/FuzzySearch";
+import { COLOR_PALETTE } from "./ColorPalette";
 
 export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
   id: string;
@@ -71,7 +72,6 @@ export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
 export type PlotContext = {
   visible: boolean[];
   color: string[];
-  palette: string[];
   style: LegendStroke[];
   selected: boolean[];
 };
@@ -125,10 +125,6 @@ export function Plot(props: PlotProps) {
     setGetContext(ctx);
     setSetContext(() => setCtx);
 
-    if (!getContext().palette || getContext().palette.length == 0) {
-      setContext()("palette", kelly_colors_hex);
-    }
-
     if (
       !getContext().color ||
       getContext().color.length == 0 ||
@@ -137,7 +133,7 @@ export function Plot(props: PlotProps) {
       setContext()(
         "color",
         props.header.map(
-          (_, index) => kelly_colors_hex[index % kelly_colors_hex.length],
+          (_, index) => COLOR_PALETTE[index % COLOR_PALETTE.length],
         ),
       );
     }
@@ -1450,7 +1446,6 @@ export function Plot(props: PlotProps) {
                             props.onContextChange?.(getContext());
                             plot.redraw();
                           }}
-                          palette={getContext().palette}
                           width="min-content"
                           stroke={getContext().style[item]}
                           onStrokeChange={(new_style) => {
@@ -1509,28 +1504,3 @@ export function Plot(props: PlotProps) {
     </>
   );
 }
-
-const kelly_colors_hex = [
-  "#FFB300", // Vivid Yellow
-  "#803E75", // Strong Purple
-  "#FF6800", // Vivid Orange
-  "#A6BDD7", // Very Light Blue
-  "#C10020", // Vivid Red
-  "#CEA262", // Grayish Yellow
-  "#817066", // Medium Gray
-
-  // The following don't work well for people with color impairments.
-  "#007D34", // Vivid Green
-  "#F6768E", // Strong Purplish Pink
-  "#00538A", // Strong Blue
-  "#FF7A5C", // Strong Yellowish Pink
-  "#53377A", // Strong Violet
-  "#FF8E00", // Vivid Orange Yellow
-  "#B32851", // Strong Purplish Red
-  "#F4C800", // Vivid Greenish Yellow
-  "#7F180D", // Strong Reddish Brown
-  "#93AA00", // Vivid Yellowish Green
-  "#593315", // Deep Yellowish Brown
-  "#F13A13", // Vivid Reddish Orange
-  "#232C16", // Dark Olive Green
-];
