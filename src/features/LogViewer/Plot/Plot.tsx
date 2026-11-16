@@ -42,7 +42,7 @@ import { fuzzySearch } from "~/utils/FuzzySearch";
 import { COLOR_PALETTE } from "./ColorPalette";
 import { CursorModeToggleGroup } from "./CursorMode/CursorModeToggleGroup";
 import { createCursorMode, CursorMode } from "./CursorMode/CreateCursorMode";
-import { createDotFilter } from "./Plugin/CreateDotFilter";
+import { createDotFilter } from "./DotFilter/CreateDotFilter";
 
 export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
   id: string;
