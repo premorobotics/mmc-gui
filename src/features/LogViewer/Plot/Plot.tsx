@@ -3,7 +3,6 @@ import {
   createSignal,
   For,
   JSX,
-  on,
   onCleanup,
   Show,
   splitProps,
@@ -43,6 +42,7 @@ import { fuzzySearch } from "~/utils/FuzzySearch";
 import { COLOR_PALETTE } from "./ColorPalette";
 import { CursorModeToggleGroup } from "./CursorMode/CursorModeToggleGroup";
 import { createCursorMode, CursorMode } from "./CursorMode/CreateCursorMode";
+import { createDotFilter } from "./Plugin/CreateDotFilter";
 
 export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
   id: string;
@@ -153,35 +153,6 @@ export function Plot(props: PlotProps) {
     );
   });
 
-  // This effect redraws the plot whenever the dot filter updates.
-  createEffect(
-    on(
-      () => dotFilter(),
-      () => {
-        if (getContext().style.every((v) => v != LegendStroke.Dot)) return;
-        const df = dotFilter();
-        if (df.length > 0) {
-          getContext().style.forEach((style, index) => {
-            if (style === LegendStroke.Dot) {
-              plot.series[index + 1].points!.filter = checkDotFilter;
-            }
-          });
-          plot.redraw();
-        } else {
-          let need_redraw: boolean = false;
-          plot.series.forEach((series) => {
-            if (series.points?.filter === checkDotFilter) {
-              series.points!.filter = () => null;
-              need_redraw = true;
-            }
-          });
-          if (need_redraw) plot.redraw();
-        }
-      },
-      { defer: true },
-    ),
-  );
-
   // Store whether zoom reset button should be disabled.
   const [zoomReset, setZoomReset] = createSignal<boolean>(true);
   const checkZoomLevel = (): UplotPluginFactory<CursorPluginMessageBus> => {
@@ -232,45 +203,17 @@ export function Plot(props: PlotProps) {
     };
   };
 
-  const [dotFilter, setDotFilter] = createSignal<number[]>([]);
-  const checkDotFilter = () => dotFilter();
   const [xScale, setXScale] = createSignal<{ xMin: number; xMax: number }>(
     props.xScale
       ? { xMin: props.xScale[0], xMax: props.xScale[1] }
       : { xMin: 0, xMax: props.series[0].length },
   );
-
-  // This effect update the dot filter whenever the plot's x range changes.
-  // The dot filter prevents dot-styled storkes for being crammed together.
-  // It uses an Nth-point decimation / stride sampling algorithm to compute the filter.
-  createEffect(
-    on(
-      () => xScale().xMax,
-      () => {
-        const domainWidth: number = document.getElementById(
-          props.id,
-        )!.offsetWidth;
-        const xRange = xScale().xMax - xScale().xMin;
-        const scale: number = xRange / domainWidth;
-        const array: number[] = [];
-
-        let i: number = 0;
-        while (scale > 0.1) {
-          array.push(i);
-          i +=
-            (Math.floor(scale) > 0
-              ? Math.floor(scale)
-              : parseFloat(scale.toFixed(1))) * 10;
-          if (i >= plot.data[0].length) {
-            break;
-          }
-        }
-        if (scale <= 0.1) array.splice(0, array.length);
-        setDotFilter(array);
-      },
-      { defer: true },
-    ),
-  );
+  const { dotFilter, checkDotFilter } = createDotFilter({
+    xScale,
+    elementId: props.id,
+    getContext,
+    plot: () => plot,
+  });
 
   onCleanup(() => {
     plot.destroy();
