@@ -1,4 +1,11 @@
-import { createSignal, onMount, onCleanup, createEffect, on } from "solid-js";
+import {
+  createSignal,
+  onMount,
+  onCleanup,
+  createEffect,
+  on,
+  For,
+} from "solid-js";
 import * as Splitter from "../components/ui/splitter.tsx";
 import { IconButton } from "~/components/ui/icon-button.tsx";
 import { IconChevronDown, IconChevronUp } from "@tabler/icons-solidjs";
@@ -248,6 +255,20 @@ function Monitoring() {
     ),
   );
 
+  const tabTriggerMeta: { label: string; disabled?: boolean }[] = [
+    { label: "Connect" },
+    { label: "Status" },
+    { label: "Control" },
+    {
+      label: "Carriers",
+      disabled:
+        carrierStates()
+          .map((state) => state.carrierStates)
+          .concat().length < 1,
+    },
+    { label: "Scenario", disabled: true },
+  ];
+
   return (
     <>
       <Splitter.Root
@@ -474,52 +495,21 @@ function Monitoring() {
               background={"gray.2"}
               borderColor={"bg.disabled"}
             >
-              <Tabs.Trigger
-                padding="0.5em"
-                value="Connect"
-                borderRadius={"0"}
-                borderTopWidth={"0"}
-              >
-                {"Connect"}
-              </Tabs.Trigger>
-              <Tabs.Trigger
-                value="Status"
-                padding="0.5em"
-                borderRadius={"0"}
-                borderTopWidth={"0"}
-              >
-                {"Status"}
-              </Tabs.Trigger>
-              <Tabs.Trigger
-                value="Control"
-                padding="0.5em"
-                borderRadius={"0"}
-                borderTopWidth={"0"}
-              >
-                {"Control"}
-              </Tabs.Trigger>
-              <Tabs.Trigger
-                value="Carriers"
-                padding="0.5em"
-                borderRadius={"0"}
-                borderTopWidth={"0"}
-                disabled={
-                  carrierStates()
-                    .map((state) => state.carrierStates)
-                    .concat().length < 1
-                }
-              >
-                {"Carriers"}
-              </Tabs.Trigger>
-              <Tabs.Trigger
-                value="Scenario"
-                padding="0.5em"
-                borderRadius={"0"}
-                borderTopWidth={"0"}
-                disabled
-              >
-                {"Scenario"}
-              </Tabs.Trigger>
+              <For each={tabTriggerMeta}>
+                {(tabTrigger) => {
+                  return (
+                    <Tabs.Trigger
+                      padding="0.5em"
+                      value={tabTrigger.label}
+                      borderRadius={"0"}
+                      borderTopWidth={"0"}
+                      disabled={tabTrigger.disabled}
+                    >
+                      {tabTrigger.label}
+                    </Tabs.Trigger>
+                  );
+                }}
+              </For>
               {/* Resize trigger */}
               <IconButton
                 size="sm"
