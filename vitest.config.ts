@@ -5,5 +5,5 @@ import tsconfigPaths from "vite-tsconfig-paths";
 export default defineConfig({
   plugins: [solid(), tsconfigPaths()],
   resolve: { conditions: ["development", "browser"] },
-  test: { environment: "jsdom" },
+  test: { environment: "jsdom", setupFiles: ["./src/test/setup.ts"] },
 });
