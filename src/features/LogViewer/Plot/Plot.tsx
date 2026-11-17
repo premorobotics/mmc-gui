@@ -44,6 +44,7 @@ import { CursorModeToggleGroup } from "./CursorMode/CursorModeToggleGroup";
 import { createCursorMode, CursorMode } from "./CursorMode/CreateCursorMode";
 import { createDotFilter } from "./DotFilter/CreateDotFilter";
 import { createZoomReset } from "./ZoomReset/CreateZoomReset";
+import { createSelectionZoom } from "./SelectionZoom/CreateSelectionZoom";
 
 export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
   id: string;
@@ -271,6 +272,15 @@ export function Plot(props: PlotProps) {
   const cursorMode = createCursorMode({
     isShortcutBlocked: (key) => key === "Shift" && isPointerOverLegend(),
   });
+  const {
+    mouseDownHandler,
+    mouseUpHandler,
+    dblClickHandler,
+    yMin,
+    yMax,
+    selectionLeft,
+    selectionWidth,
+  } = createSelectionZoom(cursorMode.mode, group(), yScale);
 
   const wheelZoomPlugin = (opts: {
     factor: number;
@@ -361,11 +371,6 @@ export function Plot(props: PlotProps) {
       };
     };
   };
-
-  const [yMin, setYMin] = createSignal<number | null>(null);
-  const [yMax, setYMax] = createSignal<number | null>(null);
-  const [selectionLeft, setSelectionLeft] = createSignal<number | null>(null);
-  const [selectionWidth, setSelectionWidth] = createSignal<number | null>(null);
 
   const [prevVisible, setPrevVisible] = createSignal<number | null>(null);
   const multiVisible = (
@@ -496,292 +501,9 @@ export function Plot(props: PlotProps) {
                   key: group(),
                 },
                 bind: {
-                  mousedown: (u) => {
-                    return (e) => {
-                      if (e.button == 0) {
-                        // Always release cursor lock if not control-clicking.
-                        if (cursorMode.mode() !== CursorMode.Lock) {
-                          // @ts-ignore: TSC unable to detect `_lock` field
-                          if (u.cursor._lock) {
-                            uPlot.sync(group()).plots.forEach((up) => {
-                              // @ts-ignore: TSC unable to detect `_lock` field
-                              up.cursor._lock = false;
-                            });
-                          }
-                        } else {
-                          // @ts-ignore: TSC unable to detect `_lock` field
-                          const new_lock = !u.cursor._lock;
-                          // Lock cursor in plot only when control-clicking.
-                          uPlot.sync(group()).plots.forEach((up) => {
-                            // @ts-ignore: TSC unable to detect `_lock` field
-                            up.cursor._lock = new_lock;
-                          });
-                          return null;
-                        }
-
-                        if (cursorMode.mode() === CursorMode.Horizontal) {
-                          const domRect = u.over.getBoundingClientRect();
-                          const uPlotDivLeft = domRect.left;
-                          const uPlotDivTop = domRect.y;
-                          const uPlotDivWidth = domRect.width;
-
-                          const clientX0 = e.clientX;
-                          const left0 = u.posToVal(
-                            clientX0 - uPlotDivLeft,
-                            "x",
-                          );
-                          setYMin(uPlotDivTop);
-                          setYMax(uPlotDivTop + domRect.height);
-
-                          let clientX1 = e.clientX;
-                          const onmove = (e: MouseEvent) => {
-                            if (e.clientX <= uPlotDivLeft) {
-                              clientX1 = uPlotDivLeft;
-                            } else if (
-                              e.clientX >=
-                              uPlotDivLeft + uPlotDivWidth
-                            ) {
-                              clientX1 = uPlotDivLeft + uPlotDivWidth;
-                            } else {
-                              clientX1 = e.clientX;
-                            }
-
-                            setSelectionLeft(Math.min(clientX0, clientX1));
-                            setSelectionWidth(
-                              Math.max(clientX0, clientX1) -
-                                Math.min(clientX0, clientX1),
-                            );
-                          };
-
-                          const onup = () => {
-                            const left1 = u.posToVal(
-                              clientX1 - uPlotDivLeft,
-                              "x",
-                            );
-                            uPlot.sync(group()).plots.forEach((up) => {
-                              up.setScale("y", {
-                                min: up.scales.y.min!,
-                                max: up.scales.y.max!,
-                              });
-                              up.setScale("x", {
-                                min: Math.min(left0, left1),
-                                max: Math.max(left0, left1),
-                              });
-                            });
-
-                            setYMax(null);
-                            setYMin(null);
-                            setSelectionWidth(null);
-                            setSelectionLeft(null);
-
-                            document.removeEventListener("mousemove", onmove);
-                            document.removeEventListener("mouseup", onup);
-                          };
-
-                          document.addEventListener("mousemove", onmove);
-                          document.addEventListener("mouseup", onup);
-                        } else if (cursorMode.mode() === CursorMode.Pan) {
-                          const xMin = 0;
-                          const xMax = u.data[0].length - 1;
-
-                          const left0 = e.clientX;
-
-                          const scXMin0 = u.scales.x.min!;
-                          const scXMax0 = u.scales.x.max!;
-
-                          const xUnitsPerPx =
-                            u.posToVal(1, "x") - u.posToVal(0, "x");
-
-                          const yMin = yScale().min;
-                          const yMax = yScale().max;
-
-                          const top0 = e.clientY;
-
-                          const scYMin0 = u.scales.y.min!;
-                          const scYMax0 = u.scales.y.max!;
-
-                          const yUnitsPerPx =
-                            u.posToVal(1, "y") - u.posToVal(0, "y");
-
-                          const onmove = (e: MouseEvent) => {
-                            e.preventDefault();
-
-                            const left1 = e.clientX;
-                            const dx = xUnitsPerPx * (left1 - left0);
-
-                            const minXBoundary = scXMin0 - dx;
-                            const maxXBoundary = scXMax0 - dx;
-
-                            let scaleXMin = minXBoundary;
-                            let scaleXMax = maxXBoundary;
-
-                            if (xMin >= minXBoundary) {
-                              scaleXMin = xMin;
-                              scaleXMax = scXMax0;
-                            } else if (xMax <= maxXBoundary) {
-                              scaleXMin = scXMin0;
-                              scaleXMax = xMax;
-                            }
-
-                            // Tilting (Vertical panning)
-                            const top1 = e.clientY;
-                            const topDx = yUnitsPerPx * (top1 - top0);
-
-                            const minYBoundary = scYMin0 - topDx;
-                            const maxYBoundary = scYMax0 - topDx;
-
-                            let scaleYMin = minYBoundary;
-                            let scaleYMax = maxYBoundary;
-
-                            if (yMin >= minYBoundary) {
-                              scaleYMin = yMin;
-                              scaleYMax = scYMax0;
-                            } else if (yMax <= maxYBoundary) {
-                              scaleYMin = scYMin0;
-                              scaleYMax = yMax;
-                            }
-
-                            uPlot.sync(group()).plots.forEach((up) => {
-                              up.setScale("x", {
-                                min: scaleXMin,
-                                max: scaleXMax,
-                              });
-                              if (!up.cursor.event) {
-                                up.setScale("y", {
-                                  min: up.scales.y.min!,
-                                  max: up.scales.y.max!,
-                                });
-                              }
-                            });
-                            u.setScale("y", {
-                              min: scaleYMin,
-                              max: scaleYMax,
-                            });
-                          };
-
-                          const onup = () => {
-                            document.removeEventListener("mousemove", onmove);
-                            document.removeEventListener("mouseup", onup);
-                          };
-
-                          document.addEventListener("mousemove", onmove);
-                          document.addEventListener("mouseup", onup);
-                        } else if (cursorMode.mode() === CursorMode.Vertical) {
-                          const y0 = e.clientY;
-                          setYMin(e.clientY);
-                          const domRec = u.over.getBoundingClientRect();
-                          setSelectionLeft(domRec.x);
-                          setSelectionWidth(u.over.offsetWidth);
-
-                          let y1: number | null = null;
-                          const uOverTop = domRec.top;
-                          const uOverHeight = domRec.height;
-
-                          const onmove = (e: MouseEvent) => {
-                            y1 = e.clientY;
-                            const uPlotBottom = uOverTop + uOverHeight;
-                            if (y1 <= uOverTop) {
-                              setYMax(uOverTop);
-                            } else if (y1 >= uPlotBottom) {
-                              setYMax(uPlotBottom);
-                            } else {
-                              setYMax(y1);
-                            }
-                          };
-
-                          const onup = () => {
-                            if (y1) {
-                              let startNumber = Math.min(y0, y1);
-                              let endNumber = Math.max(y0, y1);
-                              if (endNumber - uOverTop >= uOverHeight) {
-                                endNumber = uOverTop + uOverHeight;
-                              }
-
-                              if (startNumber - uOverTop <= 0) {
-                                startNumber = uOverTop;
-                              }
-
-                              const cursorMin = startNumber - uOverTop;
-                              const cursorMax = endNumber - uOverTop;
-
-                              const scaleYMin = u.posToVal(cursorMin, "y");
-                              const scaleYMax = u.posToVal(cursorMax, "y");
-
-                              u.setScale("y", {
-                                min: scaleYMin,
-                                max: scaleYMax,
-                              });
-
-                              setYMin(null);
-                              setYMax(null);
-                              setSelectionLeft(null);
-                              setSelectionWidth(null);
-                            }
-
-                            document.removeEventListener("mousemove", onmove);
-                            document.removeEventListener("mouseup", onup);
-                          };
-
-                          document.addEventListener("mousemove", onmove);
-                          document.addEventListener("mouseup", onup);
-                        }
-                      }
-                      return null;
-                    };
-                  },
-                  mouseup: (u, _targ, handler) => {
-                    return (e) => {
-                      if (e.button == 0) {
-                        // Prevent accidental micro-drags.
-                        if (u.select.width < 10) {
-                          u.select.width = 0;
-                        }
-                        handler(e);
-                      }
-                      return null;
-                    };
-                  },
-                  dblclick: (u) => {
-                    return (e) => {
-                      e.stopPropagation();
-
-                      if (cursorMode.mode() === CursorMode.Horizontal) {
-                        uPlot.sync(group()).plots.forEach((up) => {
-                          up.setScale("y", {
-                            min: up.scales.y.min!,
-                            max: up.scales.y.max!,
-                          });
-                          up.setScale("x", {
-                            min: 0,
-                            max: u.data[0].length - 1,
-                          });
-                        });
-                      } else if (cursorMode.mode() === CursorMode.Vertical) {
-                        uPlot.sync(group()).plots.forEach((up) => {
-                          up.setScale("y", {
-                            min: yScale().min,
-                            max: yScale().max,
-                          });
-                          up.setScale("x", {
-                            min: up.scales.x.min!,
-                            max: up.scales.x.max!,
-                          });
-                        });
-                      } else {
-                        uPlot.sync(group()).plots.forEach((up) => {
-                          up.setScale("y", {
-                            min: up.scales.y.min!,
-                            max: up.scales.y.max!,
-                          });
-                          up.setScale("x", {
-                            min: 0,
-                            max: u.data[0].length - 1,
-                          });
-                        });
-                      }
-                      return null;
-                    };
-                  },
+                  mousedown: mouseDownHandler,
+                  mouseup: mouseUpHandler,
+                  dblclick: dblClickHandler,
                 },
               }}
               autoResize={true}
