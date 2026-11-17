@@ -43,6 +43,7 @@ import { COLOR_PALETTE } from "./ColorPalette";
 import { CursorModeToggleGroup } from "./CursorMode/CursorModeToggleGroup";
 import { createCursorMode, CursorMode } from "./CursorMode/CreateCursorMode";
 import { createDotFilter } from "./DotFilter/CreateDotFilter";
+import { createZoomReset } from "./ZoomReset/CreateZoomReset";
 
 export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
   id: string;
@@ -153,56 +154,6 @@ export function Plot(props: PlotProps) {
     );
   });
 
-  // Store whether zoom reset button should be disabled.
-  const [zoomReset, setZoomReset] = createSignal<boolean>(true);
-  const checkZoomLevel = (): UplotPluginFactory<CursorPluginMessageBus> => {
-    return () => {
-      return {
-        hooks: {
-          setScale: (plot, scaleKey) => {
-            if (
-              (plot.scales.x.min && plot.scales.x.min > 0) ||
-              (plot.scales.x.max && plot.scales.x.max < plot.data[0].length - 1)
-            ) {
-              setZoomReset(false);
-            } else {
-              if (
-                (plot.scales.y.min && plot.scales.y.min > yScale().min) ||
-                (plot.scales.y.max && plot.scales.y.max < yScale().max)
-              ) {
-                setZoomReset(false);
-              } else {
-                setZoomReset(true);
-              }
-            }
-
-            if (scaleKey === "x") {
-              if (
-                typeof plot.scales.x.min === "number" &&
-                typeof plot.scales.x.max === "number"
-              ) {
-                props.onXScaleChange?.([plot.scales.x.min, plot.scales.x.max]);
-                setXScale({ xMin: plot.scales.x.min, xMax: plot.scales.x.max });
-              }
-            }
-
-            if (scaleKey === "y") {
-              if (
-                typeof plot.scales.y.min === "number" &&
-                typeof plot.scales.y.max === "number"
-              ) {
-                props.onYScaleChange?.({
-                  min: plot.scales.y.min,
-                  max: plot.scales.y.max,
-                });
-              }
-            }
-          },
-        },
-      };
-    };
-  };
-
   const [xScale, setXScale] = createSignal<{ xMin: number; xMax: number }>(
     props.xScale
       ? { xMin: props.xScale[0], xMax: props.xScale[1] }
@@ -213,6 +164,19 @@ export function Plot(props: PlotProps) {
     elementId: props.id,
     getContext,
     plot: () => plot,
+  });
+
+  const { zoomReset, checkZoomLevel, yScale } = createZoomReset({
+    onXScaleChange: (xMin, xMax) => {
+      props.onXScaleChange?.([xMin, xMax]);
+      setXScale({ xMin: xMin, xMax: xMax });
+    },
+    onYScaleChange: (yMin, yMax) => {
+      props.onYScaleChange?.({
+        min: yMin,
+        max: yMax,
+      });
+    },
   });
 
   onCleanup(() => {
@@ -335,11 +299,6 @@ export function Plot(props: PlotProps) {
 
             const over = u.over;
             const rect = over.getBoundingClientRect();
-
-            setYScale({
-              min: plot.scales.y.min!,
-              max: plot.scales.y.max!,
-            });
 
             if (props.yScale && props.yScale.max - props.yScale.min > 0) {
               u.setScale("y", props.yScale!);
@@ -466,12 +425,6 @@ export function Plot(props: PlotProps) {
   const convertPercentToPixel = (percent: number, rootWidth: number) => {
     return rootWidth * percent * 0.01;
   };
-
-  // Store the y scale min and max for reset the zoom
-  const [yScale, setYScale] = createSignal<{ min: number; max: number }>({
-    min: 0,
-    max: 0,
-  });
 
   return (
     <>
@@ -996,10 +949,10 @@ export function Plot(props: PlotProps) {
                       uPlot.sync(group()).plots.forEach((up: uPlot) => {
                         const xMax = Number(up.data[0].length - 1);
                         up.setScale("x", { min: 0, max: xMax });
-                        up.setScale("y", {
-                          min: up.scales.y.min!,
-                          max: up.scales.y.max!,
-                        });
+                      });
+                      plot.setScale("y", {
+                        min: yScale().min,
+                        max: yScale().max,
                       });
                     }}
                   >
