@@ -32,7 +32,11 @@ import { Tooltip } from "~/components/ui/tooltip";
 import { Portal } from "solid-js/web";
 import * as Splitter from "~/components/ui/splitter";
 import type { CursorPluginMessageBus } from "@dschz/solid-uplot/plugins";
-import { SolidUplot, createPluginBus } from "@dschz/solid-uplot";
+import {
+  SolidUplot,
+  UplotPluginFactory,
+  createPluginBus,
+} from "@dschz/solid-uplot";
 import { cursor, tooltip } from "@dschz/solid-uplot/plugins";
 import { PlotToolTip } from "./PlotTooltip";
 import { getComputedCSSVariableValue } from "~/utils/GetComputedCssVariableValue";
@@ -43,7 +47,7 @@ import { createCursorMode, CursorMode } from "./CursorMode/CreateCursorMode";
 import { createDotFilter } from "./DotFilter/CreateDotFilter";
 import { createZoomReset } from "./ZoomReset/CreateZoomReset";
 import { createSelectionZoom } from "./SelectionZoom/CreateSelectionZoom";
-import { createWheelZoomPlugin } from "./WheelZoom/WheelZoom";
+import { wheelZoomPlugin } from "./WheelZoom/WheelZoom";
 
 export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
   id: string;
@@ -179,6 +183,27 @@ export function Plot(props: PlotProps) {
     },
   });
 
+  const initializeZoomState =
+    (): UplotPluginFactory<CursorPluginMessageBus> => {
+      return () => {
+        return {
+          hooks: {
+            ready: (plot) => {
+              if (props.xScale) {
+                plot.setScale("x", {
+                  min: props.xScale[0],
+                  max: props.xScale[1],
+                });
+              }
+              if (props.yScale) {
+                plot.setScale("y", props.yScale);
+              }
+            },
+          },
+        };
+      };
+    };
+
   onCleanup(() => {
     plot.destroy();
   });
@@ -280,13 +305,6 @@ export function Plot(props: PlotProps) {
     selectionLeft,
     selectionWidth,
   } = createSelectionZoom(cursorMode.mode, group(), yScale);
-
-  const { wheelZoomPlugin } = createWheelZoomPlugin(
-    cursorMode.mode,
-    group(),
-    props.xScale ?? [0, 0],
-    props.yScale ?? { min: yScale().min, max: yScale().max },
-  );
 
   const [prevVisible, setPrevVisible] = createSignal<number | null>(null);
   const multiVisible = (
@@ -515,7 +533,11 @@ export function Plot(props: PlotProps) {
               }
               plugins={[
                 cursor(),
-                wheelZoomPlugin({ factor: 0.75, group: group() }),
+                wheelZoomPlugin({
+                  factor: 0.75,
+                  group: group(),
+                  cursorMode: cursorMode.mode,
+                }),
                 checkZoomLevel(),
                 tooltip((tooltipProps) =>
                   PlotToolTip({
@@ -523,6 +545,7 @@ export function Plot(props: PlotProps) {
                     enumMapping: props.enumMapping,
                   }),
                 ),
+                initializeZoomState(),
               ]}
               pluginBus={bus}
             />
