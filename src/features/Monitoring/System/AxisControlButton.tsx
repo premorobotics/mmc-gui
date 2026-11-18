@@ -16,7 +16,6 @@ export type AxisControlProps = {
   onPull?: (axisDirection: Request_Direction, carrierId: string) => void;
   onPush?: (axisDirection: Request_Direction) => void;
   onStopPull?: () => void;
-  onStopCommand?: () => void;
   onInitialize?: (
     direction: Request_Direction,
     carrierId: string,
