@@ -1,17 +1,18 @@
 import { Stack } from "styled-system/jsx";
 import { IconButton } from "~/components/ui/icon-button";
-import { Show, For, createSignal, createEffect, on } from "solid-js";
+import { Show, For, createSignal } from "solid-js";
 import uPlot from "uplot";
 import { IconEyeOff, IconEye } from "@tabler/icons-solidjs";
 import { Legend } from "./Legend";
 import { PlotContext } from "./Plot";
-import { createStore, reconcile } from "solid-js/store";
 import { LegendStroke } from "./Legend";
+import { SetStoreFunction } from "solid-js/store";
 
 type LegendListProps = {
   plot: uPlot;
   group: string;
-  context: PlotContext;
+  ctx: PlotContext;
+  setCtx: SetStoreFunction<PlotContext>;
   onContextChange?: (ctx: PlotContext) => void;
   legendIndex: number[];
   cursorIdx: number | null;
@@ -23,13 +24,6 @@ type LegendListProps = {
 };
 
 export function LegendList(props: LegendListProps) {
-  const [ctx, setCtx] = createStore(props.context);
-  createEffect(
-    on(
-      () => props.context,
-      () => setCtx(reconcile(props.context)),
-    ),
-  );
   const group = () => props.group;
   const legendIndex = () => props.legendIndex;
   const cursorIdx = () => props.cursorIdx;
@@ -43,7 +37,7 @@ export function LegendList(props: LegendListProps) {
     legendIndexes: number[],
     plot: uPlot,
   ) => {
-    const visible = ctx.visible;
+    const visible = props.ctx.visible;
     const min = Math.min(index, prevIndex + 1);
     const max = Math.max(index + 1, prevIndex);
     const indexList = legendIndexes.slice(min, max);
@@ -55,7 +49,7 @@ export function LegendList(props: LegendListProps) {
     // Prevent selection context changes after plot series visibility changes
     // Plot visibility changes trigger a refresh of the plot API context,
     // which also refreshes the customize plot context.
-    const prevSelect = ctx.selected;
+    const prevSelect = props.ctx.selected;
 
     if (isAllSame) {
       plot.batch(() => {
@@ -69,8 +63,9 @@ export function LegendList(props: LegendListProps) {
             return visible;
           }
         });
-        setCtx("visible", updateVisible);
-        setCtx("selected", prevSelect);
+        props.setCtx("visible", updateVisible);
+        props.setCtx("selected", prevSelect);
+        props.onContextChange?.(props.ctx);
       });
       return;
     }
@@ -82,7 +77,7 @@ export function LegendList(props: LegendListProps) {
     prevIndex: number,
     legendIndexes: number[],
   ) => {
-    const select = ctx.selected;
+    const select = props.ctx.selected;
     const min = Math.min(index, prevIndex + 1);
     const max = Math.max(index + 1, prevIndex);
     const indexList = legendIndexes.slice(min, max);
@@ -99,7 +94,8 @@ export function LegendList(props: LegendListProps) {
           return selected;
         }
       });
-      setCtx("selected", updateSelected);
+      props.setCtx("selected", updateSelected);
+      props.onContextChange?.(props.ctx);
       return;
     }
   };
@@ -111,28 +107,28 @@ export function LegendList(props: LegendListProps) {
           size="xs"
           variant="plain"
           onClick={() => {
-            const prevSelect = ctx.selected;
-            const newVisible = !ctx.visible
+            const prevSelect = props.ctx.selected;
+            const newVisible = !props.ctx.visible
               .filter((_, i) => legendIndex().includes(i))
               .includes(true);
-            setCtx(
+            props.setCtx(
               "visible",
-              ctx.visible.map((visible, i) => {
+              props.ctx.visible.map((visible, i) => {
                 if (legendIndex().includes(i)) return newVisible;
                 else return visible;
               }),
             );
-            ctx.visible.forEach((val, i) => {
+            props.ctx.visible.forEach((val, i) => {
               props.plot.setSeries(i + 1, {
                 show: val,
               });
             });
-            setCtx("selected", prevSelect);
-            props.onContextChange?.(ctx);
+            props.setCtx("selected", prevSelect);
+            props.onContextChange?.(props.ctx);
           }}
         >
           <Show
-            when={ctx.visible
+            when={props.ctx.visible
               .filter((_, i) => legendIndex().includes(i))
               .includes(true)}
             fallback={<IconEye />}
@@ -165,7 +161,7 @@ export function LegendList(props: LegendListProps) {
                     : undefined
                 }
                 showSelectCheckBox={showLegendCheckBox()}
-                selected={ctx.selected[item]}
+                selected={props.ctx.selected[item]}
                 onSelectChange={(isChecked, shiftKey) => {
                   if (shiftKey === true && typeof prevSelect() === "number") {
                     multiSelect(index(), prevSelect()!, legendIndex());
@@ -173,12 +169,12 @@ export function LegendList(props: LegendListProps) {
                     setPrevVisible(null);
                     return;
                   } else {
-                    setCtx("selected", item, isChecked);
+                    props.setCtx("selected", item, isChecked);
                     setPrevSelect(index());
-                    props.onContextChange?.(ctx);
+                    props.onContextChange?.(props.ctx);
                   }
                 }}
-                visible={ctx.visible[item]}
+                visible={props.ctx.visible[item]}
                 onVisibleChange={(new_visible, shiftKey) => {
                   if (shiftKey) {
                     if (prevVisible() !== null) {
@@ -193,7 +189,7 @@ export function LegendList(props: LegendListProps) {
                     setPrevVisible(null);
                     return;
                   } else {
-                    setCtx("visible", item, new_visible);
+                    props.setCtx("visible", item, new_visible);
                     // Index must add 1 to account for X-axis "Cycle" series
                     props.plot.batch(() => {
                       props.plot.setSeries(item + 1, {
@@ -204,28 +200,28 @@ export function LegendList(props: LegendListProps) {
                         max: props.plot.scales.y.max!,
                       });
                     });
-                    props.onContextChange?.(ctx);
+                    props.onContextChange?.(props.ctx);
                     setPrevVisible(index());
                   }
                 }}
-                color={ctx.color[item]}
+                color={props.ctx.color[item]}
                 onColorChange={(new_color) => {
-                  setCtx("color", item, new_color);
-                  props.onContextChange?.(ctx);
+                  props.setCtx("color", item, new_color);
+                  props.onContextChange?.(props.ctx);
                   props.plot.redraw();
                 }}
                 width="min-content"
-                stroke={ctx.style[item]}
+                stroke={props.ctx.style[item]}
                 onStrokeChange={(new_style) => {
-                  setCtx("style", item, new_style);
+                  props.setCtx("style", item, new_style);
                   props.plot.delSeries(item + 1);
                   const config = {
-                    stroke: ctx.color[item],
+                    stroke: props.ctx.color[item],
                     label: header,
-                    ...(ctx.style[item] === LegendStroke.Dash && {
+                    ...(props.ctx.style[item] === LegendStroke.Dash && {
                       dash: [10, 5],
                     }),
-                    ...(ctx.style[item] === LegendStroke.Dot && {
+                    ...(props.ctx.style[item] === LegendStroke.Dot && {
                       dash: [0, 5],
                       points: {
                         show: true,
@@ -236,7 +232,7 @@ export function LegendList(props: LegendListProps) {
                     }),
                   };
                   props.plot.addSeries(config, item + 1);
-                  props.onContextChange?.(ctx);
+                  props.onContextChange?.(props.ctx);
                   setTimeout(() => {
                     props.plot.redraw();
                   }, 200);

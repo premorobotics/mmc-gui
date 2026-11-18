@@ -101,9 +101,12 @@ export function Plot(props: PlotProps) {
 
   const group = () => props.group ?? props.id ?? "";
 
-  const [ctx, setCtx] = createStore(
-    props.context ? props.context : ({} as PlotContext),
-  );
+  const [ctx, setCtx] = createStore<PlotContext>({
+    visible: [],
+    color: [],
+    style: [],
+    selected: [],
+  });
   createEffect(
     on(
       () => props.context,
@@ -128,6 +131,7 @@ export function Plot(props: PlotProps) {
           selected: header.map(() => false),
         };
         setCtx(reconcile(newCtx));
+        props.onContextChange?.(structuredClone(newCtx));
       },
     ),
   );
@@ -144,22 +148,13 @@ export function Plot(props: PlotProps) {
     plot: () => plot,
   });
 
-  const { zoomReset, checkZoomLevel, yScale } = createZoomReset({
-    onXScaleChange: (xMin, xMax) => {
-      props.onXScaleChange?.([xMin, xMax]);
-      setXScale({ xMin: xMin, xMax: xMax });
-    },
-    onYScaleChange: (yMin, yMax) => {
-      props.onYScaleChange?.({
-        min: yMin,
-        max: yMax,
-      });
-    },
-  });
+  const { zoomReset, checkZoomLevel, yScale } = createZoomReset();
 
   const initializeZoomState =
     (): UplotPluginFactory<CursorPluginMessageBus> => {
       return () => {
+        // Set scale event triggered before ready. So it must need to check the plot is ready before update the scale.
+        let isReady = false;
         return {
           hooks: {
             ready: (plot) => {
@@ -171,6 +166,37 @@ export function Plot(props: PlotProps) {
               }
               if (props.yScale) {
                 plot.setScale("y", props.yScale);
+              }
+              isReady = true;
+            },
+            setScale: (plot, scaleKey) => {
+              if (!isReady) return;
+              if (scaleKey === "x") {
+                if (
+                  typeof plot.scales.x.min === "number" &&
+                  typeof plot.scales.x.max === "number"
+                ) {
+                  props.onXScaleChange?.([
+                    plot.scales.x.min,
+                    plot.scales.x.max,
+                  ]);
+                  setXScale({
+                    xMin: plot.scales.x.min,
+                    xMax: plot.scales.x.max,
+                  });
+                }
+              }
+
+              if (scaleKey === "y") {
+                if (
+                  typeof plot.scales.y.min === "number" &&
+                  typeof plot.scales.y.max === "number"
+                ) {
+                  props.onYScaleChange?.({
+                    min: plot.scales.y.min,
+                    max: plot.scales.y.max,
+                  });
+                }
               }
             },
           },
@@ -635,10 +661,11 @@ export function Plot(props: PlotProps) {
             >
               <Show when={render()}>
                 <LegendList
-                  context={ctx}
+                  ctx={ctx}
+                  setCtx={setCtx}
                   plot={plot!}
-                  onContextChange={(ctx) => {
-                    props.onContextChange?.(ctx);
+                  onContextChange={(newCtx) => {
+                    props.onContextChange?.(structuredClone(unwrap(newCtx)));
                   }}
                   showLegendCheckbox={showLegendCheckBox()}
                   enumMapping={props.enumMapping}
