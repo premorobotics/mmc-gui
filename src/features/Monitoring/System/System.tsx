@@ -17,6 +17,7 @@ import {
 import { Stack } from "styled-system/jsx/stack";
 import { LineCommandParameters } from "./LineControlButton.tsx";
 import { Line as LineType, LineConfig } from "../../../pages/Monitoring.tsx";
+import { Request_Direction } from "~/proto/mmc/command_pb.ts";
 
 export type SendingCommand = {
   line: string;
@@ -33,10 +34,14 @@ export type SystemProps = JSX.HTMLAttributes<HTMLDivElement> & {
   systems: Store<LineType[]>;
   sendingCommand: SendingCommand;
   onLineCommands?: (params: SystemLineCommandParam) => void;
-  onPush?: (lineIndex: number, commandDirection: string, axis: number) => void;
+  onPush?: (
+    lineIndex: number,
+    commandDirection: Request_Direction,
+    axis: number,
+  ) => void;
   onPull?: (
     lineIndex: number,
-    commandDirection: string,
+    commandDirection: Request_Direction,
     axis: number,
     carrier: string,
   ) => void;
@@ -44,9 +49,9 @@ export type SystemProps = JSX.HTMLAttributes<HTMLDivElement> & {
   onInitialize?: (
     lineIndex: number,
     axisId: number,
-    direction: string,
+    direction: Request_Direction,
     carrierId: string,
-    linkAxis?: string,
+    linkAxis?: Request_Direction,
   ) => void;
   onDeinitialize?: (lineIndex: number, axisId: number) => void;
 };
