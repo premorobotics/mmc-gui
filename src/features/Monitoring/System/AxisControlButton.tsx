@@ -7,24 +7,20 @@ import { createSignal, For, Show } from "solid-js";
 import { Text } from "~/components/ui/text.tsx";
 import * as Select from "~/components/ui/select.tsx";
 import { createListCollection } from "@ark-ui/solid";
-
-export enum AxisDirection {
-  FORWARD = "forward",
-  BACKWARD = "backward",
-}
+import { Request_Direction } from "~/proto/mmc/command_pb";
 
 export type AxisControlProps = {
   hasCarrier?: boolean;
   sendingCommand: boolean;
   disableCommandButton: boolean;
-  onPull?: (axisDirection: string, carrierId: string) => void;
-  onPush?: (axisDirection: string) => void;
+  onPull?: (axisDirection: Request_Direction, carrierId: string) => void;
+  onPush?: (axisDirection: Request_Direction) => void;
   onStopPull?: () => void;
   onStopCommand?: () => void;
   onInitialize?: (
-    direction: string,
+    direction: Request_Direction,
     carrierId: string,
-    linkAxis?: string,
+    linkAxis?: Request_Direction,
   ) => void;
   onDeinitialize?: () => void;
   stopPullDisabled?: boolean;
@@ -41,41 +37,47 @@ enum AxisCommandType {
   None,
 }
 
-enum AxisLink {
-  None = "none",
-  Left = "left",
-  Right = "right",
-}
-
 export function AxisControlButton(props: AxisControlProps & IconButtonProps) {
   const { onPull, onPush, onStopPull, ...IconButtonProps } = props;
 
-  const [pushDirection, setPushDirection] = createSignal<AxisDirection>(
-    AxisDirection.FORWARD,
+  const [pushDirection, setPushDirection] = createSignal<Request_Direction>(
+    Request_Direction.FORWARD,
   );
   const [pullCarrierId, setPullCarrierId] = createSignal<string>("");
-  const [pullDirection, setPullDirection] = createSignal<AxisDirection>(
-    AxisDirection.BACKWARD,
+  const [pullDirection, setPullDirection] = createSignal<Request_Direction>(
+    Request_Direction.BACKWARD,
   );
 
   const [initializeCarrierId, setInitializeCarrierId] =
     createSignal<string>("");
   const [initializeDirection, setInitializeDirection] =
-    createSignal<AxisDirection>(AxisDirection.FORWARD);
-  const [initializeLink, setInitializeLink] = createSignal<AxisLink>(
-    AxisLink.None,
+    createSignal<Request_Direction>(Request_Direction.FORWARD);
+  const [initializeLink, setInitializeLink] = createSignal<Request_Direction>(
+    Request_Direction.UNSPECIFIED,
   );
   const axisLinkCollection = createListCollection({
     items: [
-      { label: AxisLink.None, value: AxisLink.None },
-      { label: AxisLink.Left, value: AxisLink.Left },
-      { label: AxisLink.Right, value: AxisLink.Right },
+      {
+        label: "None",
+        value: "none",
+        enumValue: Request_Direction.UNSPECIFIED,
+      },
+      { label: "Left", value: "forward", enumValue: Request_Direction.FORWARD },
+      {
+        label: "Right",
+        value: "backward",
+        enumValue: Request_Direction.BACKWARD,
+      },
     ],
   });
 
   const [lastCommand, setLastCommand] = createSignal<AxisCommandType>(
     AxisCommandType.None,
   );
+
+  const showDirectionLabel = (dir: Request_Direction) => {
+    return dir === Request_Direction.FORWARD ? "Forward" : "Backward";
+  };
 
   return (
     <Show when={!props.disableMmcCliButton}>
@@ -165,9 +167,9 @@ export function AxisControlButton(props: AxisControlProps & IconButtonProps) {
                 variant="outline"
                 onClick={() => {
                   setPushDirection(
-                    pushDirection() === AxisDirection.FORWARD
-                      ? AxisDirection.BACKWARD
-                      : AxisDirection.FORWARD,
+                    pushDirection() === Request_Direction.FORWARD
+                      ? Request_Direction.BACKWARD
+                      : Request_Direction.FORWARD,
                   );
                 }}
                 style={{
@@ -175,7 +177,7 @@ export function AxisControlButton(props: AxisControlProps & IconButtonProps) {
                   "grid-column": 1,
                 }}
               >
-                {pushDirection()}
+                {showDirectionLabel(pushDirection())}
               </Button>
             </div>
 
@@ -276,13 +278,13 @@ export function AxisControlButton(props: AxisControlProps & IconButtonProps) {
                 style={{ "grid-row": 3, "grid-column": 2 }}
                 onClick={() => {
                   setPullDirection(
-                    pullDirection() === AxisDirection.FORWARD
-                      ? AxisDirection.BACKWARD
-                      : AxisDirection.FORWARD,
+                    pullDirection() === Request_Direction.FORWARD
+                      ? Request_Direction.BACKWARD
+                      : Request_Direction.FORWARD,
                   );
                 }}
               >
-                {pullDirection()}
+                {showDirectionLabel(pullDirection())}
               </Button>
             </div>
 
@@ -324,7 +326,7 @@ export function AxisControlButton(props: AxisControlProps & IconButtonProps) {
                     props.onInitialize?.(
                       initializeDirection(),
                       initializeCarrierId(),
-                      initializeLink() === AxisLink.None
+                      initializeLink() === Request_Direction.UNSPECIFIED
                         ? undefined
                         : initializeLink(),
                     );
@@ -347,9 +349,9 @@ export function AxisControlButton(props: AxisControlProps & IconButtonProps) {
                 variant="outline"
                 onClick={() => {
                   setInitializeDirection(
-                    initializeDirection() === AxisDirection.FORWARD
-                      ? AxisDirection.BACKWARD
-                      : AxisDirection.FORWARD,
+                    initializeDirection() === Request_Direction.FORWARD
+                      ? Request_Direction.BACKWARD
+                      : Request_Direction.FORWARD,
                   );
                 }}
                 style={{
@@ -357,7 +359,7 @@ export function AxisControlButton(props: AxisControlProps & IconButtonProps) {
                   "grid-column": 1,
                 }}
               >
-                {initializeDirection()}
+                {showDirectionLabel(initializeDirection())}
               </Button>
               <Text
                 textStyle="sm"
@@ -381,7 +383,10 @@ export function AxisControlButton(props: AxisControlProps & IconButtonProps) {
                 style={{
                   "grid-row": 4,
                   "grid-column": 1,
-                  opacity: initializeLink() === AxisLink.None ? "0.5" : "1",
+                  opacity:
+                    initializeLink() === Request_Direction.UNSPECIFIED
+                      ? "0.5"
+                      : "1",
                 }}
               >
                 {"Link Axis"}
@@ -394,14 +399,22 @@ export function AxisControlButton(props: AxisControlProps & IconButtonProps) {
                 positioning={{ sameWidth: true }}
                 width="2xs"
                 collection={axisLinkCollection}
-                defaultValue={[initializeLink()]}
+                defaultValue={[
+                  ...axisLinkCollection.items
+                    .filter((link) => link.enumValue === initializeLink())
+                    .map((item) => item.value),
+                ]}
                 onValueChange={(v) => {
-                  setInitializeLink(v.items[0].label);
+                  setInitializeLink(v.items[0].enumValue);
                 }}
               >
                 <Select.Control>
                   <Select.Trigger
-                    opacity={initializeLink() === AxisLink.None ? "0.5" : "1"}
+                    opacity={
+                      initializeLink() === Request_Direction.UNSPECIFIED
+                        ? "0.5"
+                        : "1"
+                    }
                   >
                     <Select.ValueText placeholder={`Link Axis`} />
                   </Select.Trigger>
