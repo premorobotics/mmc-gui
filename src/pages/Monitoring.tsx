@@ -41,7 +41,6 @@ import CarrierPage, {
 } from "../features/Monitoring/MonitoringSidebar/CarrierPage.tsx";
 import { load } from "@tauri-apps/plugin-store";
 import { toaster } from "~/components/ui/toast.tsx";
-import { Request_Direction } from "~/proto/mmc/command_pb.ts";
 import { Control } from "~/proto/mmc/control_pb.ts";
 import { MonitoringWebsocket } from "~/features/Monitoring/Websocket/MonitoringWebsocket.ts";
 import { MmcCommandWebsocket } from "~/features/Monitoring/Websocket/MmcCommandWebsocket.ts";
@@ -255,18 +254,18 @@ function Monitoring() {
     ),
   );
 
-  const tabTriggerMeta: { label: string; disabled?: boolean }[] = [
+  const tabTriggerMeta: { label: string; disabled?: () => boolean }[] = [
     { label: "Connect" },
     { label: "Status" },
     { label: "Control" },
     {
       label: "Carriers",
-      disabled:
+      disabled: () =>
         carrierStates()
           .map((state) => state.carrierStates)
-          .concat().length < 1,
+          .flat().length < 1,
     },
-    { label: "Scenario", disabled: true },
+    { label: "Scenario", disabled: () => true },
   ];
 
   return (
@@ -316,9 +315,7 @@ function Monitoring() {
                     lineId,
                     axisId,
                     Number(carrierId),
-                    commandDirection === "forward"
-                      ? Request_Direction.FORWARD
-                      : Request_Direction.BACKWARD,
+                    commandDirection,
                     speed,
                     acceleration,
                   );
@@ -359,9 +356,7 @@ function Monitoring() {
                   await commandServerHandler.push(
                     lineId,
                     axisId,
-                    commandDirection === "forward"
-                      ? Request_Direction.FORWARD
-                      : Request_Direction.BACKWARD,
+                    commandDirection,
                     speed,
                     acceleration,
                   );
@@ -391,16 +386,8 @@ function Monitoring() {
                     lineId,
                     axisId,
                     Number(carrierId),
-                    direction === "backward"
-                      ? Request_Direction.BACKWARD
-                      : Request_Direction.FORWARD,
-                    typeof axisLink === "string"
-                      ? axisLink === "backward"
-                        ? Request_Direction.BACKWARD
-                        : axisLink === "none"
-                          ? Request_Direction.UNSPECIFIED
-                          : Request_Direction.FORWARD
-                      : axisLink,
+                    direction,
+                    axisLink,
                   );
                   setSendingCmd(null);
                 } catch (e) {
@@ -503,7 +490,7 @@ function Monitoring() {
                       value={tabTrigger.label}
                       borderRadius={"0"}
                       borderTopWidth={"0"}
-                      disabled={tabTrigger.disabled}
+                      disabled={tabTrigger.disabled?.()}
                     >
                       {tabTrigger.label}
                     </Tabs.Trigger>
