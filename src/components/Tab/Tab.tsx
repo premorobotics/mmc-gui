@@ -256,14 +256,6 @@ export function Tab(props: TabProps) {
                   margin="0"
                   gap="0"
                 >
-                  <Stack
-                    style={{
-                      width: "0.8em",
-                      height: "0.5em",
-                      "border-radius": "1em",
-                    }}
-                    background="accent.7"
-                  />
                   <Editable.Root
                     fontSize={"sm"}
                     fontWeight={"medium"}
