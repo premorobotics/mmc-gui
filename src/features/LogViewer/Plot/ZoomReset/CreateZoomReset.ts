@@ -2,12 +2,7 @@ import { UplotPluginFactory } from "@dschz/solid-uplot";
 import { CursorPluginMessageBus } from "@dschz/solid-uplot/plugins";
 import { Accessor, createSignal } from "solid-js";
 
-export function createZoomReset(
-  opts: {
-    onXScaleChange?: (xMin: number, xMax: number) => void;
-    onYScaleChange?: (yMin: number, yMax: number) => void;
-  } = {},
-): {
+export function createZoomReset(): {
   zoomReset: Accessor<boolean>;
   checkZoomLevel: () => UplotPluginFactory<CursorPluginMessageBus>;
   yScale: Accessor<{ min: number; max: number }>;
@@ -30,7 +25,7 @@ export function createZoomReset(
               max: plot.scales.y.max!,
             });
           },
-          setScale: (plot, scaleKey) => {
+          setScale: (plot) => {
             if (
               (plot.scales.x.min && plot.scales.x.min > 0) ||
               (plot.scales.x.max && plot.scales.x.max < plot.data[0].length - 1)
@@ -44,24 +39,6 @@ export function createZoomReset(
                 setZoomReset(false);
               } else {
                 setZoomReset(true);
-              }
-            }
-
-            if (scaleKey === "x") {
-              if (
-                typeof plot.scales.x.min === "number" &&
-                typeof plot.scales.x.max === "number"
-              ) {
-                opts.onXScaleChange?.(plot.scales.x.min, plot.scales.x.max);
-              }
-            }
-
-            if (scaleKey === "y") {
-              if (
-                typeof plot.scales.y.min === "number" &&
-                typeof plot.scales.y.max === "number"
-              ) {
-                opts.onYScaleChange?.(plot.scales.y.min, plot.scales.y.max);
               }
             }
           },
