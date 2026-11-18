@@ -3,12 +3,13 @@ import {
   createSignal,
   For,
   JSX,
+  on,
   onCleanup,
   Show,
   splitProps,
   useContext,
 } from "solid-js";
-import { createStore, unwrap } from "solid-js/store";
+import { createStore, reconcile, unwrap } from "solid-js/store";
 
 import uPlot from "uplot";
 import "uplot/dist/uPlot.min.css";
@@ -105,58 +106,36 @@ export function Plot(props: PlotProps) {
   const [ctx, setCtx] = createStore(
     props.context ? props.context : ({} as PlotContext),
   );
-  const [getContext, setGetContext] = createSignal(ctx);
-  const [setContext, setSetContext] = createSignal(setCtx);
-
-  // Reset context when context prop changes.
-  createEffect(() => {
-    const [ctx, setCtx] = createStore(
-      props.context != null ? props.context : ({} as PlotContext),
-    );
-
-    setGetContext(ctx);
-    setSetContext(() => setCtx);
-
-    if (
-      !getContext().color ||
-      getContext().color.length == 0 ||
-      getContext().color.length !== props.header.length
-    ) {
-      setContext()(
-        "color",
-        props.header.map(
-          (_, index) => COLOR_PALETTE[index % COLOR_PALETTE.length],
-        ),
-      );
-    }
-
-    if (
-      !getContext().style ||
-      getContext().style.length == 0 ||
-      getContext().style.length !== props.header.length
-    ) {
-      setContext()(
-        "style",
-        props.header.map(() => LegendStroke.Line),
-      );
-    }
-
-    if (
-      !getContext().visible ||
-      getContext().visible.length == 0 ||
-      getContext().visible.length !== props.header.length
-    ) {
-      setContext()(
-        "visible",
-        props.header.map(() => true),
-      );
-    }
-
-    setContext()(
-      "selected",
-      props.header.map(() => false),
-    );
-  });
+  createEffect(
+    on(
+      () => props.context,
+      (context) => {
+        const header = props.header;
+        const n = header.length;
+        const newCtx: PlotContext = {
+          color:
+            typeof context !== "undefined" &&
+            context.color &&
+            context.color.length === n
+              ? [...context.color]
+              : header.map((_, i) => COLOR_PALETTE[i % COLOR_PALETTE.length]),
+          style:
+            context && context.style && context.style.length === n
+              ? [...context.style]
+              : header.map(() => LegendStroke.Line),
+          visible:
+            context && context.visible && context.visible.length === n
+              ? [...context.visible]
+              : header.map(() => true),
+          selected:
+            context && context.selected && context.selected.length === n
+              ? [...context.selected]
+              : header.map(() => false),
+        };
+        setCtx(reconcile(newCtx));
+      },
+    ),
+  );
 
   const [xScale, setXScale] = createSignal<{ xMin: number; xMax: number }>(
     props.xScale
@@ -166,7 +145,7 @@ export function Plot(props: PlotProps) {
   const { dotFilter, checkDotFilter } = createDotFilter({
     xScale,
     elementId: props.id,
-    getContext,
+    ctx,
     plot: () => plot,
   });
 
@@ -269,7 +248,7 @@ export function Plot(props: PlotProps) {
     prevIndex: number,
     legendIndexes: number[],
   ) => {
-    const select = getContext().selected;
+    const select = ctx.selected;
     const min = Math.min(index, prevIndex + 1);
     const max = Math.max(index + 1, prevIndex);
     const indexList = legendIndexes.slice(min, max);
@@ -286,7 +265,7 @@ export function Plot(props: PlotProps) {
           return selected;
         }
       });
-      setContext()("selected", updateSelected);
+      setCtx("selected", updateSelected);
       return;
     }
   };
@@ -313,7 +292,7 @@ export function Plot(props: PlotProps) {
     legendIndexes: number[],
     plot: uPlot,
   ) => {
-    const visible = getContext().visible;
+    const visible = ctx.visible;
     const min = Math.min(index, prevIndex + 1);
     const max = Math.max(index + 1, prevIndex);
     const indexList = legendIndexes.slice(min, max);
@@ -325,7 +304,7 @@ export function Plot(props: PlotProps) {
     // Prevent selection context changes after plot series visibility changes
     // Plot visibility changes trigger a refresh of the plot API context,
     // which also refreshes the customize plot context.
-    const prevSelect = getContext().selected;
+    const prevSelect = ctx.selected;
 
     if (isAllSame) {
       plot.batch(() => {
@@ -339,8 +318,8 @@ export function Plot(props: PlotProps) {
             return visible;
           }
         });
-        setContext()("visible", updateVisible);
-        setContext()("selected", prevSelect);
+        setCtx("visible", updateVisible);
+        setCtx("selected", prevSelect);
       });
       return;
     }
@@ -509,16 +488,15 @@ export function Plot(props: PlotProps) {
                       },
                       ...props.header.map((_, index) => ({
                         label: props.header[index],
-                        stroke: () => unwrap(getContext()).color[index],
-                        show: unwrap(getContext()).visible[index],
+                        stroke: () => unwrap(ctx).color[index],
+                        show: unwrap(ctx).visible[index],
                         width: 1 / devicePixelRatio,
                         ...{
-                          ...(unwrap(getContext()).style[index] ===
+                          ...(unwrap(ctx).style[index] ===
                             LegendStroke.Dash && {
                             dash: [10, 5],
                           }),
-                          ...(unwrap(getContext()).style[index] ===
-                            LegendStroke.Dot && {
+                          ...(unwrap(ctx).style[index] === LegendStroke.Dot && {
                             dash: [0, 5],
                             points: {
                               show: true,
@@ -688,7 +666,7 @@ export function Plot(props: PlotProps) {
                   size="xs"
                   onClick={() => {
                     if (showLegendCheckBox()) {
-                      setContext()(
+                      setCtx(
                         "selected",
                         props.header.map(() => false),
                       );
@@ -734,29 +712,29 @@ export function Plot(props: PlotProps) {
                     size="xs"
                     variant="plain"
                     onClick={() => {
-                      const prevSelect = getContext().selected;
-                      const newVisible = !getContext()
-                        .visible.filter((_, i) => legendIndex().includes(i))
+                      const prevSelect = ctx.selected;
+                      const newVisible = !ctx.visible
+                        .filter((_, i) => legendIndex().includes(i))
                         .includes(true);
-                      setContext()(
+                      setCtx(
                         "visible",
-                        getContext().visible.map((visible, i) => {
+                        ctx.visible.map((visible, i) => {
                           if (legendIndex().includes(i)) return newVisible;
                           else return visible;
                         }),
                       );
-                      getContext().visible.forEach((val, i) => {
+                      ctx.visible.forEach((val, i) => {
                         plot.setSeries(i + 1, {
                           show: val,
                         });
                       });
-                      setContext()("selected", prevSelect);
-                      props.onContextChange?.(getContext());
+                      setCtx("selected", prevSelect);
+                      props.onContextChange?.(ctx);
                     }}
                   >
                     <Show
-                      when={getContext()
-                        .visible.filter((_, i) => legendIndex().includes(i))
+                      when={ctx.visible
+                        .filter((_, i) => legendIndex().includes(i))
                         .includes(true)}
                       fallback={<IconEye />}
                     >
@@ -788,7 +766,7 @@ export function Plot(props: PlotProps) {
                               : undefined
                           }
                           showSelectCheckBox={showLegendCheckBox()}
-                          selected={getContext().selected[item]}
+                          selected={ctx.selected[item]}
                           onSelectChange={(isChecked, shiftKey) => {
                             if (
                               shiftKey === true &&
@@ -803,12 +781,12 @@ export function Plot(props: PlotProps) {
                               setPrevVisible(null);
                               return;
                             } else {
-                              setContext()("selected", item, isChecked);
+                              setCtx("selected", item, isChecked);
                               setPrevSelect(index());
-                              props.onContextChange?.(getContext());
+                              props.onContextChange?.(ctx);
                             }
                           }}
-                          visible={getContext().visible[item]}
+                          visible={ctx.visible[item]}
                           onVisibleChange={(new_visible, shiftKey) => {
                             if (shiftKey) {
                               if (prevVisible() !== null) {
@@ -823,7 +801,7 @@ export function Plot(props: PlotProps) {
                               setPrevVisible(null);
                               return;
                             } else {
-                              setContext()("visible", item, new_visible);
+                              setCtx("visible", item, new_visible);
                               // Index must add 1 to account for X-axis "Cycle" series
                               plot.batch(() => {
                                 plot.setSeries(item + 1, {
@@ -834,30 +812,28 @@ export function Plot(props: PlotProps) {
                                   max: plot.scales.y.max!,
                                 });
                               });
-                              props.onContextChange?.(getContext());
+                              props.onContextChange?.(ctx);
                               setPrevVisible(index());
                             }
                           }}
-                          color={getContext().color[item]}
+                          color={ctx.color[item]}
                           onColorChange={(new_color) => {
-                            setContext()("color", item, new_color);
-                            props.onContextChange?.(getContext());
+                            setCtx("color", item, new_color);
+                            props.onContextChange?.(ctx);
                             plot.redraw();
                           }}
                           width="min-content"
-                          stroke={getContext().style[item]}
+                          stroke={ctx.style[item]}
                           onStrokeChange={(new_style) => {
-                            setContext()("style", item, new_style);
+                            setCtx("style", item, new_style);
                             plot.delSeries(item + 1);
                             const config = {
-                              stroke: getContext().color[item],
+                              stroke: ctx.color[item],
                               label: header,
-                              ...(getContext().style[item] ===
-                                LegendStroke.Dash && {
+                              ...(ctx.style[item] === LegendStroke.Dash && {
                                 dash: [10, 5],
                               }),
-                              ...(getContext().style[item] ===
-                                LegendStroke.Dot && {
+                              ...(ctx.style[item] === LegendStroke.Dot && {
                                 dash: [0, 5],
                                 points: {
                                   show: true,
@@ -868,7 +844,7 @@ export function Plot(props: PlotProps) {
                               }),
                             };
                             plot.addSeries(config, item + 1);
-                            props.onContextChange?.(getContext());
+                            props.onContextChange?.(ctx);
                             setTimeout(() => {
                               plot.redraw();
                             }, 200);

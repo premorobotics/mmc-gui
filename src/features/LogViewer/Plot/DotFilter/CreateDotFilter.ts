@@ -6,7 +6,7 @@ import { LegendStroke } from "../Legend";
 export function createDotFilter(opts: {
   xScale: Accessor<{ xMin: number; xMax: number }>;
   elementId: string;
-  getContext: Accessor<PlotContext>;
+  ctx: PlotContext;
   plot: () => uPlot | undefined;
 }) {
   const [dotFilter, setDotFilter] = createSignal<number[]>([]);
@@ -54,10 +54,10 @@ export function createDotFilter(opts: {
       (df) => {
         const plot = opts.plot();
         if (!plot) return;
-        if (opts.getContext().style.every((v) => v != LegendStroke.Dot)) return;
+        if (opts.ctx.style.every((v) => v != LegendStroke.Dot)) return;
 
         if (df.length > 0) {
-          opts.getContext().style.forEach((style, index) => {
+          opts.ctx.style.forEach((style, index) => {
             if (style === LegendStroke.Dot) {
               plot.series[index + 1].points!.filter = checkDotFilter;
             }
