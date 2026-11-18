@@ -160,8 +160,6 @@ export function Axis(props: AxisProps) {
           onPush={(axisDirection) => {
             props.onPush?.(axisDirection);
           }}
-          onStopPull={() => props.onStopPull?.()}
-          onStopCommand={() => props.onStopCommand?.()}
           onInitialize={(direction, carrierId, axisLink) =>
             props.onInitialize?.(direction, carrierId, axisLink)
           }
