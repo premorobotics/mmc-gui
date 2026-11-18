@@ -1,7 +1,6 @@
 import {
   createEffect,
   createSignal,
-  For,
   JSX,
   on,
   onCleanup,
@@ -19,8 +18,6 @@ import { IconButton } from "~/components/ui/icon-button";
 import {
   IconChevronLeftPipe,
   IconChevronRightPipe,
-  IconEye,
-  IconEyeOff,
   IconLocation,
   IconLocationOff,
   IconSearch,
@@ -28,7 +25,7 @@ import {
   IconZoomReset,
 } from "@tabler/icons-solidjs";
 import { Stack } from "styled-system/jsx";
-import { Legend, LegendStroke } from "./Legend";
+import { LegendStroke } from "./Legend";
 import { Tooltip } from "~/components/ui/tooltip";
 import { Portal } from "solid-js/web";
 import * as Splitter from "~/components/ui/splitter";
@@ -49,6 +46,7 @@ import { createDotFilter } from "./DotFilter/CreateDotFilter";
 import { createZoomReset } from "./ZoomReset/CreateZoomReset";
 import { createSelectionZoom } from "./SelectionZoom/CreateSelectionZoom";
 import { wheelZoomPlugin } from "./WheelZoom/WheelZoom";
+import { LegendList } from "./LegendList";
 
 export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
   id: string;
@@ -127,10 +125,7 @@ export function Plot(props: PlotProps) {
             context && context.visible && context.visible.length === n
               ? [...context.visible]
               : header.map(() => true),
-          selected:
-            context && context.selected && context.selected.length === n
-              ? [...context.selected]
-              : header.map(() => false),
+          selected: header.map(() => false),
         };
         setCtx(reconcile(newCtx));
       },
@@ -242,34 +237,6 @@ export function Plot(props: PlotProps) {
     }
   });
 
-  const [prevSelect, setPrevSelect] = createSignal<number | null>(null);
-  const multiSelect = (
-    index: number,
-    prevIndex: number,
-    legendIndexes: number[],
-  ) => {
-    const select = ctx.selected;
-    const min = Math.min(index, prevIndex + 1);
-    const max = Math.max(index + 1, prevIndex);
-    const indexList = legendIndexes.slice(min, max);
-
-    const shiftSelect = indexList.map((item) => select[item]);
-    const shiftSelectState = [...new Set(shiftSelect)];
-    const isAllSame = shiftSelectState.length !== 2;
-
-    if (isAllSame) {
-      const updateSelected = select.map((selected, i) => {
-        if (indexList.includes(i)) {
-          return !shiftSelectState[0];
-        } else {
-          return selected;
-        }
-      });
-      setCtx("selected", updateSelected);
-      return;
-    }
-  };
-
   const [isPointerOverLegend, setIsPointerOverLegend] =
     createSignal<boolean>(false);
   const cursorMode = createCursorMode({
@@ -284,46 +251,6 @@ export function Plot(props: PlotProps) {
     selectionLeft,
     selectionWidth,
   } = createSelectionZoom(cursorMode.mode, group(), yScale);
-
-  const [prevVisible, setPrevVisible] = createSignal<number | null>(null);
-  const multiVisible = (
-    index: number,
-    prevIndex: number,
-    legendIndexes: number[],
-    plot: uPlot,
-  ) => {
-    const visible = ctx.visible;
-    const min = Math.min(index, prevIndex + 1);
-    const max = Math.max(index + 1, prevIndex);
-    const indexList = legendIndexes.slice(min, max);
-
-    const shiftVisible = indexList.map((item) => visible[item]);
-    const shiftVisibleState = [...new Set(shiftVisible)];
-    const isAllSame = shiftVisibleState.length !== 2;
-
-    // Prevent selection context changes after plot series visibility changes
-    // Plot visibility changes trigger a refresh of the plot API context,
-    // which also refreshes the customize plot context.
-    const prevSelect = ctx.selected;
-
-    if (isAllSame) {
-      plot.batch(() => {
-        const updateVisible = visible.map((visible, i) => {
-          if (indexList.includes(i)) {
-            plot.setSeries(i + 1, {
-              show: !shiftVisibleState[0],
-            });
-            return !shiftVisibleState[0];
-          } else {
-            return visible;
-          }
-        });
-        setCtx("visible", updateVisible);
-        setCtx("selected", prevSelect);
-      });
-      return;
-    }
-  };
 
   const [rootWidth, setRootWidth] = createSignal<number>(0);
   const rootObserver = new ResizeObserver((entry) => {
@@ -707,153 +634,21 @@ export function Plot(props: PlotProps) {
               }}
             >
               <Show when={render()}>
-                <Stack direction="row" gap="0.2rem">
-                  <IconButton
-                    size="xs"
-                    variant="plain"
-                    onClick={() => {
-                      const prevSelect = ctx.selected;
-                      const newVisible = !ctx.visible
-                        .filter((_, i) => legendIndex().includes(i))
-                        .includes(true);
-                      setCtx(
-                        "visible",
-                        ctx.visible.map((visible, i) => {
-                          if (legendIndex().includes(i)) return newVisible;
-                          else return visible;
-                        }),
-                      );
-                      ctx.visible.forEach((val, i) => {
-                        plot.setSeries(i + 1, {
-                          show: val,
-                        });
-                      });
-                      setCtx("selected", prevSelect);
-                      props.onContextChange?.(ctx);
-                    }}
-                  >
-                    <Show
-                      when={ctx.visible
-                        .filter((_, i) => legendIndex().includes(i))
-                        .includes(true)}
-                      fallback={<IconEye />}
-                    >
-                      <IconEyeOff />
-                    </Show>
-                  </IconButton>
-                  <Legend
-                    plot={plot!}
-                    series="Cycle"
-                    group={group()}
-                    width="min-content"
-                    cursorIdx={cursorIdx()}
-                    readonly
-                  />
-                </Stack>
-                <For each={legendIndex()}>
-                  {(item, index) => {
-                    const header = props.header[item];
-                    return (
-                      <div style={{ width: "100% " }}>
-                        <Legend
-                          plot={plot}
-                          group={group()}
-                          series={header}
-                          cursorIdx={cursorIdx()}
-                          enumValuesMapping={
-                            props.enumMapping && props.enumMapping.has(header)
-                              ? props.enumMapping.get(header)
-                              : undefined
-                          }
-                          showSelectCheckBox={showLegendCheckBox()}
-                          selected={ctx.selected[item]}
-                          onSelectChange={(isChecked, shiftKey) => {
-                            if (
-                              shiftKey === true &&
-                              typeof prevSelect() === "number"
-                            ) {
-                              multiSelect(
-                                index(),
-                                prevSelect()!,
-                                legendIndex(),
-                              );
-                              setPrevSelect(null);
-                              setPrevVisible(null);
-                              return;
-                            } else {
-                              setCtx("selected", item, isChecked);
-                              setPrevSelect(index());
-                              props.onContextChange?.(ctx);
-                            }
-                          }}
-                          visible={ctx.visible[item]}
-                          onVisibleChange={(new_visible, shiftKey) => {
-                            if (shiftKey) {
-                              if (prevVisible() !== null) {
-                                multiVisible(
-                                  index(),
-                                  prevVisible()!,
-                                  legendIndex(),
-                                  plot,
-                                );
-                              }
-                              setPrevSelect(null);
-                              setPrevVisible(null);
-                              return;
-                            } else {
-                              setCtx("visible", item, new_visible);
-                              // Index must add 1 to account for X-axis "Cycle" series
-                              plot.batch(() => {
-                                plot.setSeries(item + 1, {
-                                  show: new_visible,
-                                });
-                                plot.setScale("y", {
-                                  min: plot.scales.y.min!,
-                                  max: plot.scales.y.max!,
-                                });
-                              });
-                              props.onContextChange?.(ctx);
-                              setPrevVisible(index());
-                            }
-                          }}
-                          color={ctx.color[item]}
-                          onColorChange={(new_color) => {
-                            setCtx("color", item, new_color);
-                            props.onContextChange?.(ctx);
-                            plot.redraw();
-                          }}
-                          width="min-content"
-                          stroke={ctx.style[item]}
-                          onStrokeChange={(new_style) => {
-                            setCtx("style", item, new_style);
-                            plot.delSeries(item + 1);
-                            const config = {
-                              stroke: ctx.color[item],
-                              label: header,
-                              ...(ctx.style[item] === LegendStroke.Dash && {
-                                dash: [10, 5],
-                              }),
-                              ...(ctx.style[item] === LegendStroke.Dot && {
-                                dash: [0, 5],
-                                points: {
-                                  show: true,
-                                  ...(dotFilter().length !== 0 && {
-                                    filter: checkDotFilter,
-                                  }),
-                                },
-                              }),
-                            };
-                            plot.addSeries(config, item + 1);
-                            props.onContextChange?.(ctx);
-                            setTimeout(() => {
-                              plot.redraw();
-                            }, 200);
-                          }}
-                        />
-                      </div>
-                    );
+                <LegendList
+                  context={ctx}
+                  plot={plot!}
+                  onContextChange={(ctx) => {
+                    props.onContextChange?.(ctx);
                   }}
-                </For>
+                  showLegendCheckbox={showLegendCheckBox()}
+                  enumMapping={props.enumMapping}
+                  dotFilter={dotFilter()}
+                  checkDotFilter={checkDotFilter}
+                  cursorIdx={cursorIdx()}
+                  header={props.header}
+                  legendIndex={legendIndex()}
+                  group={group()}
+                />
               </Show>
             </Stack>
           </Splitter.Panel>
