@@ -206,10 +206,6 @@ export function Plot(props: PlotProps) {
       };
     };
 
-  onCleanup(() => {
-    plot.destroy();
-  });
-
   const [fgDefault, setFgDefault] = createSignal<string>(
     getComputedCSSVariableValue("--colors-fg-default"),
   );
@@ -258,12 +254,6 @@ export function Plot(props: PlotProps) {
   });
 
   const bus = createPluginBus<CursorPluginMessageBus>();
-
-  onCleanup(() => {
-    if (plot) {
-      uPlot.sync(group()).unsub(plot);
-    }
-  });
 
   const [isPointerOverLegend, setIsPointerOverLegend] =
     createSignal<boolean>(false);
