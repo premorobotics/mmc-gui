@@ -77,7 +77,6 @@ export type PlotContext = {
 
 export function Plot(props: PlotProps) {
   const [, rest] = splitProps(props, [
-    "name",
     "header",
     "series",
     "id",
