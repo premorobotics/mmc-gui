@@ -30,11 +30,7 @@ import { Tooltip } from "~/components/ui/tooltip";
 import { Portal } from "solid-js/web";
 import * as Splitter from "~/components/ui/splitter";
 import type { CursorPluginMessageBus } from "@dschz/solid-uplot/plugins";
-import {
-  SolidUplot,
-  UplotPluginFactory,
-  createPluginBus,
-} from "@dschz/solid-uplot";
+import { SolidUplot, createPluginBus } from "@dschz/solid-uplot";
 import { cursor, tooltip } from "@dschz/solid-uplot/plugins";
 import { PlotToolTip } from "./PlotTooltip";
 import { getComputedCSSVariableValue } from "~/utils/GetComputedCssVariableValue";
@@ -48,6 +44,7 @@ import { createSelectionZoom } from "./SelectionZoom/CreateSelectionZoom";
 import { wheelZoomPlugin } from "./WheelZoom/WheelZoom";
 import { LegendList } from "./LegendList";
 import { toSeriesOptions } from "./SeriesOption/SeriesOption";
+import { createInitializeZoomState } from "./InitializeZoomState/CreateInitializeZoomState";
 
 export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
   id: string;
@@ -149,62 +146,15 @@ export function Plot(props: PlotProps) {
     ctx,
     plot: () => plot,
   });
+  const { initializeZoomState } = createInitializeZoomState({
+    xScale: props.xScale,
+    yScale: props.yScale,
+    onXScaleChange: props.onXScaleChange,
+    onYScaleChange: props.onYScaleChange,
+    setXScale,
+  });
 
   const { zoomReset, checkZoomLevel, yScale } = createZoomReset();
-
-  const initializeZoomState =
-    (): UplotPluginFactory<CursorPluginMessageBus> => {
-      return () => {
-        // Set scale event triggered before ready. So it must need to check the plot is ready before update the scale.
-        let isReady = false;
-        return {
-          hooks: {
-            ready: (plot) => {
-              if (props.xScale) {
-                plot.setScale("x", {
-                  min: props.xScale[0],
-                  max: props.xScale[1],
-                });
-              }
-              if (props.yScale) {
-                plot.setScale("y", props.yScale);
-              }
-              isReady = true;
-            },
-            setScale: (plot, scaleKey) => {
-              if (!isReady) return;
-              if (scaleKey === "x") {
-                if (
-                  typeof plot.scales.x.min === "number" &&
-                  typeof plot.scales.x.max === "number"
-                ) {
-                  props.onXScaleChange?.([
-                    plot.scales.x.min,
-                    plot.scales.x.max,
-                  ]);
-                  setXScale({
-                    xMin: plot.scales.x.min,
-                    xMax: plot.scales.x.max,
-                  });
-                }
-              }
-
-              if (scaleKey === "y") {
-                if (
-                  typeof plot.scales.y.min === "number" &&
-                  typeof plot.scales.y.max === "number"
-                ) {
-                  props.onYScaleChange?.({
-                    min: plot.scales.y.min,
-                    max: plot.scales.y.max,
-                  });
-                }
-              }
-            },
-          },
-        };
-      };
-    };
 
   const [fgDefault, setFgDefault] = createSignal<string>(
     getComputedCSSVariableValue("--colors-fg-default"),
