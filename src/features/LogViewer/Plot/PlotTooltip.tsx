@@ -12,6 +12,8 @@ import { Stack } from "styled-system/jsx";
 import { Text } from "~/components/ui/text";
 import { IconLine, IconLineDashed, IconPoint } from "@tabler/icons-solidjs";
 import { Dynamic, Portal } from "solid-js/web";
+import { STROKE_DASH } from "./SeriesOption/SeriesOption";
+import { LegendStroke } from "./Legend";
 
 export const PlotToolTip = (
   props: TooltipProps & { enumMapping?: Map<string, Map<number, string>> },
@@ -113,7 +115,8 @@ export const PlotToolTip = (
                       component={
                         !currentSeries.dash
                           ? IconLine
-                          : JSON.stringify(currentSeries.dash) === "[10,5]"
+                          : currentSeries.dash.toString() ===
+                              STROKE_DASH[LegendStroke.Dash]?.toString()
                             ? IconLineDashed
                             : IconPoint
                       }
