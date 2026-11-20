@@ -43,7 +43,7 @@ export function SeriesConfiguration(props: SeriesConfigurationProps) {
   return (
     <Card.Root style={{ padding: "0" }}>
       <Card.Header>
-        <Card.Title>Configuration asd</Card.Title>
+        <Card.Title>Configuration</Card.Title>
         <Card.Description>{props.series}</Card.Description>
         <IconButton
           position="absolute"
