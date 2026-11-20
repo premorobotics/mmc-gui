@@ -34,7 +34,6 @@ import type { CursorPluginMessageBus } from "@dschz/solid-uplot/plugins";
 import { SolidUplot, createPluginBus } from "@dschz/solid-uplot";
 import { cursor, tooltip } from "@dschz/solid-uplot/plugins";
 import { PlotToolTip } from "./PlotTooltip";
-import { fuzzySearch } from "~/utils/FuzzySearch";
 import { COLOR_PALETTE } from "./ColorPalette";
 import { CursorModeToggleGroup } from "./CursorMode/CursorModeToggleGroup";
 import { createCursorMode, CursorMode } from "./CursorMode/CreateCursorMode";
@@ -46,6 +45,7 @@ import { LegendList } from "./LegendList";
 import { toSeriesOptions } from "./SeriesOption/SeriesOption";
 import { createInitializeZoomState } from "./InitializeZoomState/CreateInitializeZoomState";
 import { getComputedCSSVariableValue } from "~/utils/GetComputedCssVariableValue";
+import { createSearchSeries } from "./SearchSeries/CreateSearchSeries";
 
 export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
   id: string;
@@ -175,29 +175,12 @@ export function Plot(props: PlotProps) {
     }
   `;
 
-  const [showLegendCheckBox, setShowLegendCheckBox] =
-    createSignal<boolean>(false);
-
-  const [searchInput, setSearchInput] = createSignal<string>("");
-  const [legendIndex, setLegendIndex] = createSignal<number[]>(
-    props.header.map((_, i) => i),
+  const { searchInput, setSearchInput, legendIndex } = createSearchSeries(
+    props.header,
   );
 
-  createEffect(() => {
-    const searchInputValue = searchInput();
-    const parseSearchResults: string[] = fuzzySearch(
-      searchInputValue,
-      props.header,
-    );
-    if (searchInputValue.length === 0) {
-      setLegendIndex(props.header.map((_, i) => i));
-    } else {
-      const headerIndex = parseSearchResults.map((str) =>
-        props.header.indexOf(str),
-      );
-      setLegendIndex(headerIndex);
-    }
-  });
+  const [showLegendCheckBox, setShowLegendCheckBox] =
+    createSignal<boolean>(false);
 
   const bus = createPluginBus<CursorPluginMessageBus>();
 
