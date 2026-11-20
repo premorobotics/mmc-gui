@@ -27,14 +27,18 @@ export function createZoomReset(): {
           },
           setScale: (plot) => {
             if (
-              (plot.scales.x.min && plot.scales.x.min > 0) ||
-              (plot.scales.x.max && plot.scales.x.max < plot.data[0].length - 1)
+              (typeof plot.scales.x.min !== "undefined" &&
+                plot.scales.x.min > 0) ||
+              (typeof plot.scales.x.max !== "undefined" &&
+                plot.scales.x.max < plot.data[0].length - 1)
             ) {
               setZoomReset(false);
             } else {
               if (
-                (plot.scales.y.min && plot.scales.y.min > yScale().min) ||
-                (plot.scales.y.max && plot.scales.y.max < yScale().max)
+                (typeof plot.scales.y.min !== "undefined" &&
+                  plot.scales.y.min > yScale().min) ||
+                (typeof plot.scales.y.max !== "undefined" &&
+                  plot.scales.y.max < yScale().max)
               ) {
                 setZoomReset(false);
               } else {

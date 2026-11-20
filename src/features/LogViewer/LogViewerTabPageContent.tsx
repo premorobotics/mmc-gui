@@ -1015,7 +1015,6 @@ export function LogViewerTabPageContent() {
                     <Plot
                       id={currentID()}
                       group={tabPageProps.tabId}
-                      name=""
                       legendPanelMinWidth={legendPanelMinWidth()}
                       header={currentHeader}
                       series={currentItems}

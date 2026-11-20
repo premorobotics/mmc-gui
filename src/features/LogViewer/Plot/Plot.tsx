@@ -51,7 +51,6 @@ import { LegendList } from "./LegendList";
 export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
   id: string;
   group?: string;
-  name: string;
   header: string[];
   series: number[][];
   legendPanelMinWidth?: number;
@@ -79,6 +78,9 @@ export function Plot(props: PlotProps) {
   const [, rest] = splitProps(props, [
     "header",
     "series",
+    "group",
+    "legendPanelMinWidth",
+    "enumMapping",
     "id",
     "context",
     "onContextChange",
