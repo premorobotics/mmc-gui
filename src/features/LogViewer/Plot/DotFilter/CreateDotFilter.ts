@@ -10,7 +10,7 @@ export function createDotFilter(opts: {
   plot: () => uPlot | undefined;
 }) {
   const [dotFilter, setDotFilter] = createSignal<number[]>([]);
-  const checkDotFilter = () => dotFilter();
+  const checkDotFilter = () => (dotFilter().length > 0 ? dotFilter() : null);
 
   // This effect update the dot filter whenever the plot's x range changes.
   // The dot filter prevents dot-styled storkes for being crammed together.
@@ -78,5 +78,5 @@ export function createDotFilter(opts: {
     ),
   );
 
-  return { dotFilter, checkDotFilter };
+  return { checkDotFilter };
 }

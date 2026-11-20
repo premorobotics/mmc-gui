@@ -47,6 +47,7 @@ import { createZoomReset } from "./ZoomReset/CreateZoomReset";
 import { createSelectionZoom } from "./SelectionZoom/CreateSelectionZoom";
 import { wheelZoomPlugin } from "./WheelZoom/WheelZoom";
 import { LegendList } from "./LegendList";
+import { toSeriesOptions } from "./SeriesOption/SeriesOption";
 
 export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
   id: string;
@@ -142,7 +143,7 @@ export function Plot(props: PlotProps) {
       ? { xMin: props.xScale[0], xMax: props.xScale[1] }
       : { xMin: 0, xMax: props.series[0].length },
   );
-  const { dotFilter, checkDotFilter } = createDotFilter({
+  const { checkDotFilter } = createDotFilter({
     xScale,
     elementId: props.id,
     ctx,
@@ -440,27 +441,15 @@ export function Plot(props: PlotProps) {
                         label: "Cycle",
                         stroke: "#ffffff",
                       },
-                      ...props.header.map((_, index) => ({
-                        label: props.header[index],
-                        stroke: () => unwrap(ctx).color[index],
-                        show: unwrap(ctx).visible[index],
-                        width: 1 / devicePixelRatio,
-                        ...{
-                          ...(unwrap(ctx).style[index] ===
-                            LegendStroke.Dash && {
-                            dash: [10, 5],
-                          }),
-                          ...(unwrap(ctx).style[index] === LegendStroke.Dot && {
-                            dash: [0, 5],
-                            points: {
-                              show: true,
-                              ...(dotFilter().length !== 0 && {
-                                filter: checkDotFilter(),
-                              }),
-                            },
-                          }),
-                        },
-                      })),
+                      ...props.header.map((_, index) => {
+                        return toSeriesOptions({
+                          label: props.header[index],
+                          stroke: () => unwrap(ctx).color[index],
+                          show: unwrap(ctx).visible[index],
+                          style: unwrap(ctx).style[index],
+                          dotFilter: checkDotFilter,
+                        });
+                      }),
                     ]
               }
               plugins={[
@@ -670,7 +659,6 @@ export function Plot(props: PlotProps) {
                   }}
                   showLegendCheckbox={showLegendCheckBox()}
                   enumMapping={props.enumMapping}
-                  dotFilter={dotFilter()}
                   checkDotFilter={checkDotFilter}
                   cursorIdx={cursorIdx()}
                   header={props.header}

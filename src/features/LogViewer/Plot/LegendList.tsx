@@ -5,8 +5,8 @@ import uPlot from "uplot";
 import { IconEyeOff, IconEye } from "@tabler/icons-solidjs";
 import { Legend } from "./Legend";
 import { PlotContext } from "./Plot";
-import { LegendStroke } from "./Legend";
 import { SetStoreFunction } from "solid-js/store";
+import { toSeriesOptions } from "./SeriesOption/SeriesOption";
 
 type LegendListProps = {
   plot: uPlot;
@@ -19,8 +19,7 @@ type LegendListProps = {
   header: string[];
   showLegendCheckbox: boolean;
   enumMapping?: Map<string, Map<number, string>>;
-  dotFilter: number[];
-  checkDotFilter: () => number[];
+  checkDotFilter: () => number[] | null;
 };
 
 export function LegendList(props: LegendListProps) {
@@ -28,7 +27,6 @@ export function LegendList(props: LegendListProps) {
   const legendIndex = () => props.legendIndex;
   const cursorIdx = () => props.cursorIdx;
   const showLegendCheckBox = () => props.showLegendCheckbox;
-  const dotFilter = () => props.dotFilter;
 
   const [prevVisible, setPrevVisible] = createSignal<number | null>(null);
   const multiVisible = (
@@ -215,22 +213,13 @@ export function LegendList(props: LegendListProps) {
                 onStrokeChange={(new_style) => {
                   props.setCtx("style", item, new_style);
                   props.plot.delSeries(item + 1);
-                  const config = {
-                    stroke: props.ctx.color[item],
+                  const config = toSeriesOptions({
                     label: header,
-                    ...(props.ctx.style[item] === LegendStroke.Dash && {
-                      dash: [10, 5],
-                    }),
-                    ...(props.ctx.style[item] === LegendStroke.Dot && {
-                      dash: [0, 5],
-                      points: {
-                        show: true,
-                        ...(dotFilter().length !== 0 && {
-                          filter: props.checkDotFilter,
-                        }),
-                      },
-                    }),
-                  };
+                    stroke: () => props.ctx.color[item],
+                    style: props.ctx.style[item],
+                    show: props.ctx.visible[item],
+                    dotFilter: props.checkDotFilter,
+                  });
                   props.plot.addSeries(config, item + 1);
                   props.onContextChange?.(props.ctx);
                   setTimeout(() => {
