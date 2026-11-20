@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { fuzzySearch } from "../../src/utils/FuzzySearch";
+import { fuzzySearch } from "./FuzzySearch";
 
 test("Test fuzzy search", () => {
   expect(
