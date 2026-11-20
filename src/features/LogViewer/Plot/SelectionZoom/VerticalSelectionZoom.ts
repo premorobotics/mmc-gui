@@ -53,12 +53,12 @@ export function verticalSelectionZoom(props: {
         min: scaleYMin,
         max: scaleYMax,
       });
-
-      props.setYMin(null);
-      props.setYMax(null);
-      props.setSelectionLeft(null);
-      props.setSelectionWidth(null);
     }
+
+    props.setYMin(null);
+    props.setYMax(null);
+    props.setSelectionLeft(null);
+    props.setSelectionWidth(null);
 
     document.removeEventListener("mousemove", onmove);
     document.removeEventListener("mouseup", onup);

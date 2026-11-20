@@ -36,7 +36,6 @@ export function wheelZoomPlugin(
           yRange = yMax - yMin;
 
           const over = u.over;
-          const rect = over.getBoundingClientRect();
 
           // wheel scroll zoom
           over.addEventListener("wheel", (e) => {
@@ -44,7 +43,7 @@ export function wheelZoomPlugin(
 
             const { left, top } = u.cursor;
 
-            const leftPct = left! / rect.width;
+            const leftPct = left! / over.offsetWidth;
             const xVal = u.posToVal(left!, "x");
             const oxRange = u.scales.x.max! - u.scales.x.min!;
 
@@ -59,7 +58,7 @@ export function wheelZoomPlugin(
             [nxMin, nxMax] = clamp(nxRange, nxMin, nxMax, xRange, xMin, xMax);
 
             // y Zoom
-            const btmPct = 1 - top! / rect.height;
+            const btmPct = 1 - top! / over.offsetHeight;
             const yVal = u.posToVal(top!, "y");
             const oyRange = u.scales.y.max! - u.scales.y.min!;
 
