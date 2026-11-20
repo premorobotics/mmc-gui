@@ -1,5 +1,6 @@
 import {
   createEffect,
+  createMemo,
   createSignal,
   JSX,
   on,
@@ -33,7 +34,6 @@ import type { CursorPluginMessageBus } from "@dschz/solid-uplot/plugins";
 import { SolidUplot, createPluginBus } from "@dschz/solid-uplot";
 import { cursor, tooltip } from "@dschz/solid-uplot/plugins";
 import { PlotToolTip } from "./PlotTooltip";
-import { getComputedCSSVariableValue } from "~/utils/GetComputedCssVariableValue";
 import { fuzzySearch } from "~/utils/FuzzySearch";
 import { COLOR_PALETTE } from "./ColorPalette";
 import { CursorModeToggleGroup } from "./CursorMode/CursorModeToggleGroup";
@@ -45,6 +45,7 @@ import { wheelZoomPlugin } from "./WheelZoom/WheelZoom";
 import { LegendList } from "./LegendList";
 import { toSeriesOptions } from "./SeriesOption/SeriesOption";
 import { createInitializeZoomState } from "./InitializeZoomState/CreateInitializeZoomState";
+import { getComputedCSSVariableValue } from "~/utils/GetComputedCssVariableValue";
 
 export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
   id: string;
@@ -92,7 +93,6 @@ export function Plot(props: PlotProps) {
     "onLegendShrinkChange",
   ]);
   const { globalState } = useContext(GlobalStateContext)!;
-  let theme = globalState.theme;
 
   const [render, setRender] = createSignal(false);
   const [cursorIdx, setCursorIdx] = createSignal<number | null>(null);
@@ -156,21 +156,17 @@ export function Plot(props: PlotProps) {
 
   const { zoomReset, checkZoomLevel, yScale } = createZoomReset();
 
-  const [fgDefault, setFgDefault] = createSignal<string>(
-    getComputedCSSVariableValue("--colors-fg-default"),
+  const color = createMemo(
+    on(
+      () => globalState.theme,
+      () => {
+        return {
+          fg: getComputedCSSVariableValue("--colors-fg-default"),
+          grid: getComputedCSSVariableValue("--colors-gray-3"),
+        };
+      },
+    ),
   );
-  const [bgMuted, setBgMuted] = createSignal<string>(
-    getComputedCSSVariableValue("--colors-gray-3"),
-  );
-
-  // This effect updates the CSS whenever the theme in global state changes.
-  createEffect(() => {
-    if (globalState.theme !== theme) {
-      theme = globalState.theme;
-      setFgDefault(getComputedCSSVariableValue("--colors-fg-default"));
-      setBgMuted(getComputedCSSVariableValue("--colors-gray-3"));
-    }
-  });
 
   const selection_css = `
     .u-select {
@@ -317,21 +313,21 @@ export function Plot(props: PlotProps) {
               autoResize={true}
               axes={[
                 {
-                  stroke: fgDefault(),
+                  stroke: color().fg,
                   grid: {
-                    stroke: bgMuted(),
+                    stroke: color().grid,
                   },
                   ticks: {
-                    stroke: bgMuted(),
+                    stroke: color().grid,
                   },
                 },
                 {
-                  stroke: fgDefault(),
+                  stroke: color().fg,
                   grid: {
-                    stroke: bgMuted(),
+                    stroke: color().grid,
                   },
                   ticks: {
-                    stroke: bgMuted(),
+                    stroke: color().grid,
                   },
                   size: (self, values, axisIdx, cycleNum) => {
                     const axis = self.axes[axisIdx]!;
