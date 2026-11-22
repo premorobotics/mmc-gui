@@ -4,7 +4,6 @@ import {
   createSignal,
   JSX,
   on,
-  onCleanup,
   Show,
   splitProps,
   useContext,
@@ -46,6 +45,7 @@ import { toSeriesOptions } from "./SeriesOption/SeriesOption";
 import { createInitializeZoomState } from "./InitializeZoomState/CreateInitializeZoomState";
 import { getComputedCSSVariableValue } from "~/utils/GetComputedCssVariableValue";
 import { createSearchSeries } from "./SearchSeries/CreateSearchSeries";
+import { createLegendPanelSize } from "./LegendPanelSize/createLegendPanelSize";
 
 export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
   id: string;
@@ -199,24 +199,12 @@ export function Plot(props: PlotProps) {
     selectionWidth,
   } = createSelectionZoom(cursorMode.mode, group(), yScale);
 
-  const [rootWidth, setRootWidth] = createSignal<number>(0);
-  const rootObserver = new ResizeObserver((entry) => {
-    const element = entry[0];
-    const rect = element.contentRect;
-    setRootWidth(rect.width);
+  const { rootObserver, size, resize } = createLegendPanelSize({
+    legendPanelMinWidth: () => props.legendPanelMinWidth,
+    legendPanelWidthPx: () => props.legendPanelWidthPx,
+    onLegendPanelWidthPx: props.onLegendPanelWidthPx,
+    onLegendShrinkChange: props.onLegendShrinkChange,
   });
-
-  onCleanup(() => {
-    rootObserver.disconnect();
-  });
-
-  const convertPixelToPercent = (rootWidth: number, elementWidth: number) => {
-    return (elementWidth / rootWidth) * 100;
-  };
-
-  const convertPercentToPixel = (percent: number, rootWidth: number) => {
-    return rootWidth * percent * 0.01;
-  };
 
   return (
     <>
@@ -226,38 +214,9 @@ export function Plot(props: PlotProps) {
         background="bg.default"
         id={`splitter-${props.id}`}
         panels={[{ id: `plot-${props.id}` }, { id: `legend-${props.id}` }]}
-        size={[
-          100 -
-            convertPixelToPercent(
-              rootWidth(),
-              props.legendPanelWidthPx ?? props.legendPanelMinWidth ?? 0,
-            ),
-          convertPixelToPercent(
-            rootWidth(),
-            props.legendPanelWidthPx ?? props.legendPanelMinWidth ?? 0,
-          ),
-        ]}
+        size={size()}
         onResize={(details) => {
-          const legendPanelSize = convertPercentToPixel(
-            details.size[1],
-            rootWidth(),
-          );
-          if (props.legendPanelMinWidth) {
-            const legendPanelMinWidth = props.legendPanelMinWidth;
-            if (legendPanelSize > legendPanelMinWidth) {
-              props.onLegendPanelWidthPx?.(legendPanelSize);
-              props.onLegendShrinkChange?.(false);
-            } else {
-              const legendMinWidhtSizeQuater = legendPanelMinWidth * 0.25;
-              if (legendPanelSize > legendMinWidhtSizeQuater) {
-                props.onLegendPanelWidthPx?.(legendPanelMinWidth);
-                props.onLegendShrinkChange?.(false);
-              } else {
-                props.onLegendPanelWidthPx?.(0);
-                props.onLegendShrinkChange?.(true);
-              }
-            }
-          }
+          resize(details.size[1]);
         }}
       >
         <Splitter.Panel
