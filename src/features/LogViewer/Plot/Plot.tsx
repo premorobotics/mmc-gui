@@ -18,15 +18,9 @@ import { IconButton } from "~/components/ui/icon-button";
 import {
   IconChevronLeftPipe,
   IconChevronRightPipe,
-  IconLocation,
-  IconLocationOff,
-  IconSearch,
-  IconX,
-  IconZoomReset,
 } from "@tabler/icons-solidjs";
 import { Stack } from "styled-system/jsx";
 import { LegendStroke, PlotContext } from "./PlotTypes";
-import { Tooltip } from "~/components/ui/tooltip";
 import { Portal } from "solid-js/web";
 import * as Splitter from "~/components/ui/splitter";
 import type { CursorPluginMessageBus } from "@dschz/solid-uplot/plugins";
@@ -34,7 +28,6 @@ import { SolidUplot, createPluginBus } from "@dschz/solid-uplot";
 import { cursor, tooltip } from "@dschz/solid-uplot/plugins";
 import { PlotToolTip } from "./PlotTooltip";
 import { COLOR_PALETTE } from "./ColorPalette";
-import { CursorModeToggleGroup } from "./CursorMode/CursorModeToggleGroup";
 import { createCursorMode, CursorMode } from "./CursorMode/CreateCursorMode";
 import { createDotFilter } from "./DotFilter/CreateDotFilter";
 import { createSelectionZoom } from "./SelectionZoom/CreateSelectionZoom";
@@ -45,6 +38,9 @@ import { getComputedCSSVariableValue } from "~/utils/GetComputedCssVariableValue
 import { createSearchSeries } from "./SearchSeries/CreateSearchSeries";
 import { createLegendPanelSize } from "./LegendPanelSize/CreateLegendPanelSize";
 import { createPlotScale } from "./PlotScale/CreatePlotScale";
+import { toAxesOptions } from "./AxisOption/AxisOption";
+import { PlotToolbox } from "./PlotToolbox";
+import { LegendToolbar } from "./LegendToolbar";
 
 export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
   id: string;
@@ -237,55 +233,7 @@ export function Plot(props: PlotProps) {
                 },
               }}
               autoResize={true}
-              axes={[
-                {
-                  stroke: color().fg,
-                  grid: {
-                    stroke: color().grid,
-                  },
-                  ticks: {
-                    stroke: color().grid,
-                  },
-                },
-                {
-                  stroke: color().fg,
-                  grid: {
-                    stroke: color().grid,
-                  },
-                  ticks: {
-                    stroke: color().grid,
-                  },
-                  size: (self, values, axisIdx, cycleNum) => {
-                    const axis = self.axes[axisIdx]!;
-
-                    // bail out, force convergence
-                    if (cycleNum > 1)
-                      return axis["_size" as keyof typeof axis] as number;
-
-                    const baseAxisSize = axis.ticks!.size! + axis.gap!;
-
-                    // find longest value
-                    const longestVal = (values ?? []).reduce(
-                      (acc, val) => (val.length > acc.length ? val : acc),
-                      "",
-                    );
-
-                    let axisSize = baseAxisSize;
-                    if (longestVal != "") {
-                      self.ctx.font = axis.font![0];
-                      axisSize =
-                        baseAxisSize +
-                        self.ctx.measureText(longestVal).width /
-                          devicePixelRatio;
-                    }
-
-                    const minAxisSize =
-                      baseAxisSize +
-                      self.ctx.measureText("999.999").width / devicePixelRatio;
-                    return Math.max(Math.ceil(axisSize), minAxisSize);
-                  },
-                },
-              ]}
+              axes={toAxesOptions(color())}
               data={[
                 Array.from({ length: props.series[0].length }, (_, i) => i), // x values
                 ...props.series,
@@ -370,116 +318,28 @@ export function Plot(props: PlotProps) {
             }}
             flexDir={"column"}
           >
-            <Stack
-              direction="row-reverse"
-              style={{
-                height: "2.3rem",
-                width: "100%",
-                "padding-right": "1.8rem",
+            <PlotToolbox
+              id={props.id}
+              isZoomReset={isZoomReset()}
+              onZoomReset={() => resetZoom(plot, group())}
+              cursorMode={cursorMode.mode()}
+              baseCursorMode={cursorMode.baseMode()}
+              onCursorModeChange={cursorMode.select}
+            />
+            <LegendToolbar
+              searchInput={searchInput()}
+              onSearchInputChange={setSearchInput}
+              showCheckbox={showLegendCheckBox()}
+              onShowCheckboxToggle={() => {
+                if (showLegendCheckBox()) {
+                  setCtx(
+                    "selected",
+                    props.header.map(() => false),
+                  );
+                }
+                setShowLegendCheckBox(!showLegendCheckBox());
               }}
-            >
-              <Stack
-                direction="row"
-                id={`toolBox:${props.id}`}
-                minWidth="13rem"
-              >
-                <Tooltip content="Zoom Reset">
-                  <IconButton
-                    marginRight="0.2rem"
-                    variant="outline"
-                    disabled={isZoomReset()}
-                    onclick={() => {
-                      resetZoom(plot, group());
-                    }}
-                  >
-                    <IconZoomReset />
-                  </IconButton>
-                </Tooltip>
-                <CursorModeToggleGroup
-                  lastCursorMode={cursorMode.baseMode()}
-                  cursorMode={cursorMode.mode()}
-                  onCursorModeChange={cursorMode.select}
-                />
-              </Stack>
-            </Stack>
-
-            <Stack
-              width={`calc(100% - 1rem)`}
-              height={"2.5em"}
-              direction="row"
-              marginTop={"0.5em"}
-              paddingLeft="0.8rem"
-              paddingRight="1rem"
-            >
-              <Stack
-                width="100%"
-                direction="row"
-                borderWidth="1px"
-                borderRadius="0.4rem"
-                paddingLeft="0.5em"
-                height="2em"
-                marginTop="0.3em"
-                gap="0"
-              >
-                <IconSearch
-                  style={{
-                    "margin-top": "0.2em",
-                    "margin-right": "0.5em",
-                  }}
-                />
-                <input
-                  value={searchInput()}
-                  onInput={(e) => {
-                    setSearchInput(e.target.value);
-                  }}
-                  placeholder="Search series"
-                  style={{
-                    border: "none",
-                    outline: "none",
-                    "white-space": "nowrap",
-                    overflow: "hidden",
-                    display: "block",
-                    "text-overflow": "ellipsis",
-                    width: `calc(100% - 0.5em)`,
-                  }}
-                  height="1em"
-                />
-                <IconButton
-                  variant="plain"
-                  onClick={() => setSearchInput("")}
-                  padding="0"
-                  size="sm"
-                  width="1em"
-                  height="1.5em"
-                  borderRadius="3em"
-                  marginTop="0.2em"
-                >
-                  <IconX />
-                </IconButton>
-              </Stack>
-              <Tooltip content="Select">
-                <IconButton
-                  variant="outline"
-                  size="xs"
-                  onClick={() => {
-                    if (showLegendCheckBox()) {
-                      setCtx(
-                        "selected",
-                        props.header.map(() => false),
-                      );
-                    }
-                    setShowLegendCheckBox(!showLegendCheckBox());
-                  }}
-                >
-                  <Show
-                    when={showLegendCheckBox()}
-                    fallback={<IconLocationOff />}
-                  >
-                    <IconLocation />
-                  </Show>
-                </IconButton>
-              </Tooltip>
-            </Stack>
+            />
             <Stack
               style={{
                 "padding-bottom": "0.5em",
