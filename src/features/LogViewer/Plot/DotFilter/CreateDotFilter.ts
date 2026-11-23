@@ -1,27 +1,28 @@
-import { Accessor, createEffect, createMemo, on } from "solid-js";
+import { createEffect, createMemo, on } from "solid-js";
 import type uPlot from "uplot";
 import { LegendStroke, PlotContext } from "../PlotTypes";
 
 export function createDotFilter(opts: {
-  xScale: Accessor<{ xMin: number; xMax: number }>;
+  xScale: () => [number, number];
   ctx: PlotContext;
   plot: () => uPlot | undefined;
 }) {
-  // This effect update the dot filter whenever the plot's x range changes.
+  // This memo update the dot filter whenever the plot's x range changes.
   // The dot filter prevents dot-styled storkes for being crammed together.
   // It uses an Nth-point decimation / stride sampling algorithm to compute the filter.
   const dotFilter = createMemo(
     on(
-      () => [opts.xScale().xMax, opts.xScale().xMin],
-      () => {
+      () => [...opts.xScale()],
+      ([xMin, xMax]) => {
         const plot = opts.plot();
         if (!plot) return [] as number[];
 
         const domainWidth: number = plot.over.offsetWidth;
-        const xRange = opts.xScale().xMax - opts.xScale().xMin;
+        const xRange = xMax - xMin;
         const scale: number = xRange / domainWidth;
-        const array: number[] = [];
+        if (scale <= 0.1) return [];
 
+        const array: number[] = [];
         let i: number = 0;
         while (scale > 0.1) {
           array.push(i);
@@ -33,7 +34,6 @@ export function createDotFilter(opts: {
             break;
           }
         }
-        if (scale <= 0.1) return array.splice(0, array.length);
         return array;
       },
     ),

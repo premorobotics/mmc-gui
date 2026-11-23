@@ -37,15 +37,14 @@ import { COLOR_PALETTE } from "./ColorPalette";
 import { CursorModeToggleGroup } from "./CursorMode/CursorModeToggleGroup";
 import { createCursorMode, CursorMode } from "./CursorMode/CreateCursorMode";
 import { createDotFilter } from "./DotFilter/CreateDotFilter";
-import { createZoomReset } from "./ZoomReset/CreateZoomReset";
 import { createSelectionZoom } from "./SelectionZoom/CreateSelectionZoom";
 import { wheelZoomPlugin } from "./WheelZoom/WheelZoom";
 import { LegendList } from "./LegendList";
 import { toSeriesOptions } from "./SeriesOption/SeriesOption";
-import { createInitializeZoomState } from "./InitializeZoomState/CreateInitializeZoomState";
 import { getComputedCSSVariableValue } from "~/utils/GetComputedCssVariableValue";
 import { createSearchSeries } from "./SearchSeries/CreateSearchSeries";
 import { createLegendPanelSize } from "./LegendPanelSize/CreateLegendPanelSize";
+import { createPlotScale } from "./PlotScale/CreatePlotScale";
 
 export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
   id: string;
@@ -127,26 +126,18 @@ export function Plot(props: PlotProps) {
       },
     ),
   );
+  const { isZoomReset, plotScalePlugin, yScale, resetZoom } = createPlotScale({
+    xScale: () => props.xScale,
+    yScale: () => props.yScale,
+    onXScaleChange: (newScale) => props.onXScaleChange?.(newScale),
+    onYScaleChange: (newScale) => props.onYScaleChange?.(newScale),
+  });
 
-  const [xScale, setXScale] = createSignal<{ xMin: number; xMax: number }>(
-    props.xScale
-      ? { xMin: props.xScale[0], xMax: props.xScale[1] }
-      : { xMin: 0, xMax: props.series[0].length },
-  );
   const { checkDotFilter } = createDotFilter({
-    xScale,
+    xScale: () => props.xScale ?? [0, props.series[0].length - 1],
     ctx,
     plot: () => plot,
   });
-  const { initializeZoomState } = createInitializeZoomState({
-    xScale: () => props.xScale,
-    yScale: () => props.yScale,
-    onXScaleChange: props.onXScaleChange,
-    onYScaleChange: props.onYScaleChange,
-    setXScale,
-  });
-
-  const { zoomReset, checkZoomLevel, yScale } = createZoomReset();
 
   const color = createMemo(
     on(
@@ -330,14 +321,13 @@ export function Plot(props: PlotProps) {
                   group: group,
                   cursorMode: cursorMode.mode,
                 }),
-                checkZoomLevel(),
+                plotScalePlugin(),
                 tooltip((tooltipProps) =>
                   PlotToolTip({
                     ...tooltipProps,
                     enumMapping: props.enumMapping,
                   }),
                 ),
-                initializeZoomState(),
               ]}
               pluginBus={bus}
             />
@@ -397,16 +387,9 @@ export function Plot(props: PlotProps) {
                   <IconButton
                     marginRight="0.2rem"
                     variant="outline"
-                    disabled={zoomReset()}
+                    disabled={isZoomReset()}
                     onclick={() => {
-                      uPlot.sync(group()).plots.forEach((up: uPlot) => {
-                        const xMax = Number(up.data[0].length - 1);
-                        up.setScale("x", { min: 0, max: xMax });
-                      });
-                      plot.setScale("y", {
-                        min: yScale().min,
-                        max: yScale().max,
-                      });
+                      resetZoom(plot, group());
                     }}
                   >
                     <IconZoomReset />
