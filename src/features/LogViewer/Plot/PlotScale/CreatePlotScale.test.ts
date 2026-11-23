@@ -1,7 +1,7 @@
 import type uPlot from "uplot";
 import { createRoot } from "solid-js";
 import { describe, expect, it } from "vitest";
-import { createZoomReset } from "./CreateZoomReset";
+import { createPlotScale } from "./CreatePlotScale";
 import {
   SolidUplot,
   createPluginBus,
@@ -47,11 +47,14 @@ const createFakePlot = (
 const FULL_X = { min: 0, max: 9 };
 const FULL_Y = { min: -10, max: 10 };
 
-describe("createZoomReset", () => {
+describe("createPlotScale", () => {
   it("starts with zoom reset disabled", () => {
     createRoot((dispose) => {
-      const { zoomReset, yScale } = createZoomReset();
-      expect(zoomReset()).toBe(true);
+      const { isZoomReset, yScale } = createPlotScale({
+        xScale: () => undefined,
+        yScale: () => undefined,
+      });
+      expect(isZoomReset()).toBe(true);
       expect(yScale()).toEqual({ min: 0, max: 0 });
       dispose();
     });
@@ -61,8 +64,11 @@ describe("createZoomReset", () => {
     // SolidUplot creates the chart in an effect, which runs when the root
     // finishes, so create the root synchronously and await afterwards.
     const { yScale, dispose } = createRoot((dispose) => {
-      const { checkZoomLevel, yScale } = createZoomReset();
-      createFakePlot(FULL_X, FULL_Y, checkZoomLevel());
+      const { plotScalePlugin, yScale } = createPlotScale({
+        xScale: () => undefined,
+        yScale: () => undefined,
+      });
+      createFakePlot(FULL_X, FULL_Y, plotScalePlugin());
       return { yScale, dispose };
     });
     // uPlot fires "ready" after its first commit, which runs in a microtask.
@@ -73,33 +79,39 @@ describe("createZoomReset", () => {
 
   it("enables zoom reset when y is zoomed in", async () => {
     let plot!: uPlot;
-    const { zoomReset, dispose } = createRoot((dispose) => {
-      const { checkZoomLevel, zoomReset } = createZoomReset();
-      createFakePlot(FULL_X, FULL_Y, checkZoomLevel(), (u) => {
+    const { isZoomReset, dispose } = createRoot((dispose) => {
+      const { plotScalePlugin, isZoomReset } = createPlotScale({
+        xScale: () => undefined,
+        yScale: () => undefined,
+      });
+      createFakePlot(FULL_X, FULL_Y, plotScalePlugin(), (u) => {
         plot = u;
       });
-      return { zoomReset, dispose };
+      return { isZoomReset, dispose };
     });
     await Promise.resolve();
     plot.setScale("y", { min: 0, max: 1 });
     await Promise.resolve();
-    expect(zoomReset()).toBe(false);
+    expect(isZoomReset()).toBe(false);
     dispose();
   });
 
   it("enables zoom reset when x is zoomed in", async () => {
     let plot!: uPlot;
-    const { zoomReset, dispose } = createRoot((dispose) => {
-      const { checkZoomLevel, zoomReset } = createZoomReset();
-      createFakePlot(FULL_X, FULL_Y, checkZoomLevel(), (u) => {
+    const { isZoomReset, dispose } = createRoot((dispose) => {
+      const { plotScalePlugin, isZoomReset } = createPlotScale({
+        xScale: () => undefined,
+        yScale: () => undefined,
+      });
+      createFakePlot(FULL_X, FULL_Y, plotScalePlugin(), (u) => {
         plot = u;
       });
-      return { zoomReset, dispose };
+      return { isZoomReset, dispose };
     });
     await Promise.resolve();
     plot.setScale("x", { min: 1, max: 3 });
     await Promise.resolve();
-    expect(zoomReset()).toBe(false);
+    expect(isZoomReset()).toBe(false);
     dispose();
   });
 });
