@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { toSeriesOptions } from "./SeriesOption";
-import { LegendStroke } from "../Legend";
+import { LegendStroke } from "../PlotTypes";
 
 describe("Test Series Option.ts", () => {
   it("When the line style is line", () => {

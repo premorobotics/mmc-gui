@@ -4,7 +4,7 @@ import { Show, For, createSignal } from "solid-js";
 import uPlot from "uplot";
 import { IconEyeOff, IconEye } from "@tabler/icons-solidjs";
 import { Legend } from "./Legend";
-import { PlotContext } from "./Plot";
+import { PlotContext } from "./PlotTypes";
 import { SetStoreFunction } from "solid-js/store";
 import { toSeriesOptions } from "./SeriesOption/SeriesOption";
 

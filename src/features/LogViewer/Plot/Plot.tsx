@@ -25,7 +25,7 @@ import {
   IconZoomReset,
 } from "@tabler/icons-solidjs";
 import { Stack } from "styled-system/jsx";
-import { LegendStroke } from "./Legend";
+import { LegendStroke, PlotContext } from "./PlotTypes";
 import { Tooltip } from "~/components/ui/tooltip";
 import { Portal } from "solid-js/web";
 import * as Splitter from "~/components/ui/splitter";
@@ -64,13 +64,6 @@ export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
   onLegendPanelWidthPx?: (widthPx: number) => void;
   legendShrink?: boolean;
   onLegendShrinkChange?: (isShrink: boolean) => void;
-};
-
-export type PlotContext = {
-  visible: boolean[];
-  color: string[];
-  style: LegendStroke[];
-  selected: boolean[];
 };
 
 export function Plot(props: PlotProps) {
