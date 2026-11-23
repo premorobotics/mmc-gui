@@ -8,7 +8,8 @@ import {
   useContext,
 } from "solid-js";
 import { createStore, reconcile } from "solid-js/store";
-import { Plot, PlotContext } from "./Plot/Plot";
+import { Plot } from "./Plot/Plot";
+import { PlotContext, LegendStroke } from "./Plot/PlotTypes";
 import { IconButton } from "~/components/ui/icon-button";
 import {
   IconFileDownload,
@@ -23,7 +24,7 @@ import * as Checkbox from "~/components/ui/checkbox";
 import { Tooltip } from "~/components/ui/tooltip";
 import { tabStore } from "~/store/GlobalState.ts";
 import { on } from "solid-js";
-import { LegendStroke } from "~/features/LogViewer/Plot/Legend";
+
 import { TabContext, TabPageContext } from "~/components/Tab/TabList";
 import { CreateToasterReturn } from "@ark-ui/solid";
 import { FileHandler } from "./FileHandler";

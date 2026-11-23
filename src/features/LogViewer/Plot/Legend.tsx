@@ -26,6 +26,7 @@ import {
 import { Heading } from "~/components/ui/heading";
 import { Portal } from "solid-js/web";
 import * as Checkbox from "~/components/ui/checkbox";
+import { LegendStroke } from "./PlotTypes";
 
 export type LegendProps = Omit<StackProps, "stroke"> & {
   plot: uPlot;
@@ -44,12 +45,6 @@ export type LegendProps = Omit<StackProps, "stroke"> & {
   selected?: boolean;
   onSelectChange?: (checkBoxValue: boolean, isShiftClick?: boolean) => void;
 };
-
-export enum LegendStroke {
-  Line,
-  Dash,
-  Dot,
-}
 
 export function Legend(props: LegendProps) {
   const [, rest] = splitProps(props, [

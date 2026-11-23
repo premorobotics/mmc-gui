@@ -1,7 +1,6 @@
 import { Accessor, createEffect, createSignal, on } from "solid-js";
 import type uPlot from "uplot";
-import type { PlotContext } from "../Plot";
-import { LegendStroke } from "../Legend";
+import { LegendStroke, PlotContext } from "../PlotTypes";
 
 export function createDotFilter(opts: {
   xScale: Accessor<{ xMin: number; xMax: number }>;

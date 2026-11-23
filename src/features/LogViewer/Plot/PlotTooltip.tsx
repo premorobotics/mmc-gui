@@ -13,7 +13,7 @@ import { Text } from "~/components/ui/text";
 import { IconLine, IconLineDashed, IconPoint } from "@tabler/icons-solidjs";
 import { Dynamic, Portal } from "solid-js/web";
 import { STROKE_DASH } from "./SeriesOption/SeriesOption";
-import { LegendStroke } from "./Legend";
+import { LegendStroke } from "./PlotTypes";
 
 export const PlotToolTip = (
   props: TooltipProps & { enumMapping?: Map<string, Map<number, string>> },

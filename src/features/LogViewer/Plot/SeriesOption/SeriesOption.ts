@@ -1,4 +1,4 @@
-import { LegendStroke } from "../Legend";
+import { LegendStroke } from "../PlotTypes";
 
 export const STROKE_DASH: Record<LegendStroke, number[] | undefined> = {
   [LegendStroke.Line]: undefined,
