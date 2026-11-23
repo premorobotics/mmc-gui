@@ -7,7 +7,7 @@ import { verticalSelectionZoom } from "./VerticalSelectionZoom";
 
 export function createSelectionZoom(
   cursorMode: Accessor<CursorMode>,
-  group: string,
+  plotGroupId: () => string,
   yScale: Accessor<{ min: number; max: number }>,
 ) {
   const [yMin, setYMin] = createSignal<number | null>(null);
@@ -22,7 +22,7 @@ export function createSelectionZoom(
         if (cursorMode() !== CursorMode.Lock) {
           // @ts-ignore: TSC unable to detect `_lock` field
           if (u.cursor._lock) {
-            uPlot.sync(group).plots.forEach((up) => {
+            uPlot.sync(plotGroupId()).plots.forEach((up) => {
               // @ts-ignore: TSC unable to detect `_lock` field
               up.cursor._lock = false;
             });
@@ -31,7 +31,7 @@ export function createSelectionZoom(
           // @ts-ignore: TSC unable to detect `_lock` field
           const new_lock = !u.cursor._lock;
           // Lock cursor in plot only when control-clicking.
-          uPlot.sync(group).plots.forEach((up) => {
+          uPlot.sync(plotGroupId()).plots.forEach((up) => {
             // @ts-ignore: TSC unable to detect `_lock` field
             up.cursor._lock = new_lock;
           });
@@ -42,7 +42,7 @@ export function createSelectionZoom(
           horizontalSelectionZoom({
             u,
             e,
-            group,
+            group: plotGroupId(),
             setYMin,
             setYMax,
             setSelectionLeft,
@@ -52,14 +52,14 @@ export function createSelectionZoom(
           panningPlot({
             u,
             e,
-            group,
+            group: plotGroupId(),
             yScale,
           });
         } else if (cursorMode() === CursorMode.Vertical) {
           verticalSelectionZoom({
             u,
             e,
-            group,
+            group: plotGroupId(),
             setYMin,
             setYMax,
             setSelectionLeft,
@@ -93,7 +93,7 @@ export function createSelectionZoom(
       e.stopPropagation();
 
       if (cursorMode() === CursorMode.Horizontal) {
-        uPlot.sync(group).plots.forEach((up) => {
+        uPlot.sync(plotGroupId()).plots.forEach((up) => {
           up.setScale("y", {
             min: up.scales.y.min!,
             max: up.scales.y.max!,
@@ -104,7 +104,7 @@ export function createSelectionZoom(
           });
         });
       } else if (cursorMode() === CursorMode.Vertical) {
-        uPlot.sync(group).plots.forEach((up) => {
+        uPlot.sync(plotGroupId()).plots.forEach((up) => {
           up.setScale("y", {
             min: yScale().min,
             max: yScale().max,
@@ -115,7 +115,7 @@ export function createSelectionZoom(
           });
         });
       } else {
-        uPlot.sync(group).plots.forEach((up) => {
+        uPlot.sync(plotGroupId()).plots.forEach((up) => {
           up.setScale("y", {
             min: up.scales.y.min!,
             max: up.scales.y.max!,

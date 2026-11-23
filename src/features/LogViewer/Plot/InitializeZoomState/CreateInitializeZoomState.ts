@@ -3,8 +3,8 @@ import { CursorPluginMessageBus } from "@dschz/solid-uplot/plugins";
 import { Setter } from "solid-js";
 
 type CreateInitializeZoomStateProps = {
-  xScale?: [number, number];
-  yScale?: { min: number; max: number };
+  xScale: () => [number, number] | undefined;
+  yScale: () => { min: number; max: number } | undefined;
   onXScaleChange?: (xScale: [number, number]) => void;
   onYScaleChange?: (yScale: { min: number; max: number }) => void;
   setXScale: Setter<{ xMin: number; xMax: number }>;
@@ -21,14 +21,17 @@ export function createInitializeZoomState(
         return {
           hooks: {
             ready: (plot) => {
-              if (props.xScale) {
+              const xScale = props.xScale();
+              if (xScale) {
                 plot.setScale("x", {
-                  min: props.xScale[0],
-                  max: props.xScale[1],
+                  min: xScale[0],
+                  max: xScale[1],
                 });
               }
-              if (props.yScale) {
-                plot.setScale("y", props.yScale);
+
+              const yScale = props.yScale();
+              if (yScale) {
+                plot.setScale("y", yScale);
               }
               isReady = true;
             },

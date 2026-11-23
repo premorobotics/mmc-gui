@@ -140,8 +140,8 @@ export function Plot(props: PlotProps) {
     plot: () => plot,
   });
   const { initializeZoomState } = createInitializeZoomState({
-    xScale: props.xScale,
-    yScale: props.yScale,
+    xScale: () => props.xScale,
+    yScale: () => props.yScale,
     onXScaleChange: props.onXScaleChange,
     onYScaleChange: props.onYScaleChange,
     setXScale,
@@ -190,13 +190,14 @@ export function Plot(props: PlotProps) {
     yMax,
     selectionLeft,
     selectionWidth,
-  } = createSelectionZoom(cursorMode.mode, group(), yScale);
+  } = createSelectionZoom(cursorMode.mode, group, yScale);
 
   const { rootObserver, size, resize } = createLegendPanelSize({
     legendPanelMinWidth: () => props.legendPanelMinWidth,
     legendPanelWidthPx: () => props.legendPanelWidthPx,
-    onLegendPanelWidthPx: props.onLegendPanelWidthPx,
-    onLegendShrinkChange: props.onLegendShrinkChange,
+    onLegendPanelWidthPx: (newWidth) => props.onLegendPanelWidthPx?.(newWidth),
+    onLegendShrinkChange: (newStatus) =>
+      props.onLegendShrinkChange?.(newStatus),
   });
 
   return (
@@ -327,7 +328,7 @@ export function Plot(props: PlotProps) {
                 cursor(),
                 wheelZoomPlugin({
                   factor: 0.75,
-                  group: group(),
+                  group: group,
                   cursorMode: cursorMode.mode,
                 }),
                 checkZoomLevel(),
