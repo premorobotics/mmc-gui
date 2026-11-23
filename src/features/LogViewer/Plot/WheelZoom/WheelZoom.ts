@@ -7,7 +7,7 @@ import { Accessor } from "solid-js";
 
 export type WheelZoomOptions = {
   factor?: number;
-  group: string;
+  group: () => string;
   cursorMode: Accessor<CursorMode>;
 };
 
@@ -70,7 +70,7 @@ export function wheelZoomPlugin(
             if (opts.cursorMode() === CursorMode.Vertical) {
               u.setScale("y", { min: nyMin, max: nyMax });
             } else {
-              uPlot.sync(opts.group).plots.forEach((up: uPlot) => {
+              uPlot.sync(opts.group()).plots.forEach((up: uPlot) => {
                 up.setScale("x", { min: nxMin, max: nxMax });
                 up.setScale("y", {
                   min: up.scales.y.min!,
