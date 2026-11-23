@@ -45,7 +45,7 @@ import { toSeriesOptions } from "./SeriesOption/SeriesOption";
 import { createInitializeZoomState } from "./InitializeZoomState/CreateInitializeZoomState";
 import { getComputedCSSVariableValue } from "~/utils/GetComputedCssVariableValue";
 import { createSearchSeries } from "./SearchSeries/CreateSearchSeries";
-import { createLegendPanelSize } from "./LegendPanelSize/createLegendPanelSize";
+import { createLegendPanelSize } from "./LegendPanelSize/CreateLegendPanelSize";
 
 export type PlotProps = JSX.HTMLAttributes<HTMLDivElement> & {
   id: string;
