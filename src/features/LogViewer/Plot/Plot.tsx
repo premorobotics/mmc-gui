@@ -135,7 +135,6 @@ export function Plot(props: PlotProps) {
   );
   const { checkDotFilter } = createDotFilter({
     xScale,
-    elementId: props.id,
     ctx,
     plot: () => plot,
   });

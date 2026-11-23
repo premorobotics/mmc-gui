@@ -1,29 +1,23 @@
-import { Accessor, createEffect, createSignal, on } from "solid-js";
+import { Accessor, createEffect, createMemo, on } from "solid-js";
 import type uPlot from "uplot";
 import { LegendStroke, PlotContext } from "../PlotTypes";
 
 export function createDotFilter(opts: {
   xScale: Accessor<{ xMin: number; xMax: number }>;
-  elementId: string;
   ctx: PlotContext;
   plot: () => uPlot | undefined;
 }) {
-  const [dotFilter, setDotFilter] = createSignal<number[]>([]);
-  const checkDotFilter = () => (dotFilter().length > 0 ? dotFilter() : null);
-
   // This effect update the dot filter whenever the plot's x range changes.
   // The dot filter prevents dot-styled storkes for being crammed together.
   // It uses an Nth-point decimation / stride sampling algorithm to compute the filter.
-  createEffect(
+  const dotFilter = createMemo(
     on(
       () => [opts.xScale().xMax, opts.xScale().xMin],
       () => {
         const plot = opts.plot();
-        if (!plot) return;
+        if (!plot) return [] as number[];
 
-        const domainWidth: number = document.getElementById(
-          opts.elementId,
-        )!.offsetWidth;
+        const domainWidth: number = plot.over.offsetWidth;
         const xRange = opts.xScale().xMax - opts.xScale().xMin;
         const scale: number = xRange / domainWidth;
         const array: number[] = [];
@@ -39,12 +33,13 @@ export function createDotFilter(opts: {
             break;
           }
         }
-        if (scale <= 0.1) array.splice(0, array.length);
-        setDotFilter(array);
+        if (scale <= 0.1) return array.splice(0, array.length);
+        return array;
       },
-      { defer: true },
     ),
   );
+
+  const checkDotFilter = () => (dotFilter().length > 0 ? dotFilter() : null);
 
   // This effect redraws the plot whenever the dot filter updates.
   createEffect(
