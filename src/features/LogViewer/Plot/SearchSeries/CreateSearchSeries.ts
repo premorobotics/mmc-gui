@@ -1,29 +1,23 @@
-import { createSignal, on } from "solid-js";
+import { createMemo, createSignal, on } from "solid-js";
 import { fuzzySearch } from "~/features/LogViewer/Plot/SearchSeries/FuzzySearch";
-import { createEffect } from "solid-js";
 
 export function createSearchSeries(header: string[]) {
   const [searchInput, setSearchInput] = createSignal<string>("");
-  const [legendIndex, setLegendIndex] = createSignal<number[]>(
-    header.map((_, i) => i),
-  );
+  const defaultLegnedIndex = header.map((_, i) => i);
 
-  createEffect(
+  const legendIndex = createMemo(
     on(
       () => searchInput(),
       (searchInputValue) => {
+        if (searchInputValue.length < 1) return defaultLegnedIndex;
         const parseSearchResults: string[] = fuzzySearch(
           searchInputValue,
           header,
         );
-        if (searchInputValue.length === 0) {
-          setLegendIndex(header.map((_, i) => i));
-        } else {
-          const headerIndex = parseSearchResults.map((str) =>
-            header.indexOf(str),
-          );
-          setLegendIndex(headerIndex);
-        }
+        const searchedHeaderIndex = parseSearchResults.map((str) =>
+          header.indexOf(str),
+        );
+        return searchedHeaderIndex;
       },
     ),
   );
